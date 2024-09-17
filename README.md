@@ -8,4 +8,4 @@
     - 1 function to read 
 - 1 script to plot outputs
 
-Processing script produces an array with dimensions **2** x **N_{s}** 
+Processing script produces an array with dimensions **2** x **N_{s}** x (**L_{t}**/**R_{t}**) x (**L_{f}**/**R_{f}**)
