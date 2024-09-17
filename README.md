@@ -8,7 +8,7 @@
     - 1 function to read 
 - 1 script to plot outputs
 
-Processing script produces an array with dimensions 
+Processing script produces a NetCDF file with dimensions 
 
 **2** x **N_{s}** x (**L_{t}**/**N_{t}**) x (**L_{f}**/**N_{f}**), 
 
