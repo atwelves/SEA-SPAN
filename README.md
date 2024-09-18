@@ -4,8 +4,14 @@
 - 1 script to process
     - 1 function to select bounds in lat, lon, time, and frequency domain
     - 1 function to read tide gauge qc flags
+    - 1 function to read tide gauge data 
     - 1 function to read NEMO grid
-    - 1 function to read 
+    - 1 function to match tide gauge coordinates to NEMO grid points
+    - 1 function to extract station time series from full model output
+    - 1 function to set time and frequency binning
+    - 1 function to construct basis functions
+    - 1 function to do convolution
+    - 1 function to do time/frequency binning
 - 1 script to plot outputs
 
 Processing script produces a NetCDF file with dimensions 
