@@ -36,6 +36,12 @@ qc_tol      =       # Number of bad flagged values allowed
 basis_fn    =       # Basis function for transform
 #           { 'Cosine'
 #             'Ricker'
+
+    return transform
+### --------------------------------------------------------------------- ###
+
+### --- Do binning?
+def collect_bins(transform)
 #             'Gaussian' }
 #           |
 centre_ssh  =       # Subtract mean from time series (1) or not (0)
@@ -133,7 +139,10 @@ def sub_marine(time_series):
 # scale_min
 # scale_max
 def make_waves(t_init, t_final)
-    for t in range(t_init, t_final)
+    # DECLARE ARRAY
+    # something like a linspace here
+    for mu in range(t_init, t_final)
+        for f in range 
     return
 ### --------------------------------------------------------------------- ###
 
@@ -141,6 +150,10 @@ def make_waves(t_init, t_final)
 # GLOBAL VARIABLES:
 # basis_fn
 def convolute_it(time_series, wavelets)
+    # DECLARE ARRAY:
+    convolv_array = np.copy(wavelets) # copy 3d wavelet array
+    for t in range()
+        convolv_array(t,:,:) = time_series(t) * wavelets(t,:,:)
     return convolv_array
 ### --------------------------------------------------------------------- ###
 
@@ -148,18 +161,24 @@ def convolute_it(time_series, wavelets)
 # GLOBAL VARIABLES:
 # basis_fn
 def do_transform(convolv_array)
+    transform = np.nansum(convolv_array,0)
+    # Normalisation?
     return transform
 ### --------------------------------------------------------------------- ###
 
 ### --- Do binning?
 def collect_bins(transform)
+    for t in range
+        for f in range
+            for mu in range
     return binned_transform
 ### --------------------------------------------------------------------- ###
 
 ### --- Write arrays to netcdf ------------------------------------------ ###
 # GLOBAL VARIABLES:
 # output_name
-def write_both(station, )
+def write_both(station, obs_transform, mod_transform)
+    transform_out = np.concat(obs_transform,mod_transform)
     xr.to_netcdf('{}'.format(station))
     return 
 ### --------------------------------------------------------------------- ###
