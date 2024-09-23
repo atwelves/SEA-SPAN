@@ -28,7 +28,7 @@ scale_min   =       # Shortest timescale of interest
 scale_max   =       # Longest timescale of interest
 #           |
 time_res    =       # Time resolution of transform
-freq_bins   =       # Number of frequency bins in transform
+freq_res    =       # Frequency resolution of transform
 #           |
 qc_pass     =       # Quality control flags deemed good
 qc_tol      =       # Number of bad flagged values allowed
@@ -36,12 +36,6 @@ qc_tol      =       # Number of bad flagged values allowed
 basis_fn    =       # Basis function for transform
 #           { 'Cosine'
 #             'Ricker'
-
-    return transform
-### --------------------------------------------------------------------- ###
-
-### --- Do binning?
-def collect_bins(transform)
 #             'Gaussian' }
 #           |
 centre_ssh  =       # Subtract mean from time series (1) or not (0)
@@ -141,9 +135,13 @@ def sub_marine(time_series):
 def make_waves(t_init, t_final)
     # DECLARE ARRAY
     # something like a linspace here
-    for mu in range(t_init, t_final)
-        for f in range 
-    return
+#    if (basis_fn=="Cosine"):
+#        wavelets[:]   = 
+#    if (basis_fn=="Ricker"):
+#        wavelets[:,:] = 
+    if (basis_fn=="Gaussian"):
+        wavelets[:,:] = np.exp(-np.square(t[:])/np.square(scale[:]))
+    return wavelets
 ### --------------------------------------------------------------------- ###
 
 ### --- Convolute basis functions with time series ---------------------- ###
@@ -166,11 +164,16 @@ def do_transform(convolv_array)
     return transform
 ### --------------------------------------------------------------------- ###
 
-### --- Do binning?
+### --- Do binning? ----------------------------------------------------- ###
+# GLOBAL VARIABLES:
+# time_res
+# freq_res
 def collect_bins(transform)
-    for t in range
-        for f in range
-            for mu in range
+    for t in range():
+        tnew = time_res*np.int(tnew/time_res)
+        for f in range():
+            fnew = freq_res*np.int(fnew/freq_res)
+            binned_transform[t,f] = transform[tnew,fnew] 
     return binned_transform
 ### --------------------------------------------------------------------- ###
 
