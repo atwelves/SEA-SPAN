@@ -53,6 +53,8 @@ import numpy as np
 
 ### --- Set bounds in latitude, longitude, time, and frequency domain --- ###
 # GLOBAL VARIABLES:
+# lat_min
+# lat_max
 # year_min
 # year_max
 # month_min
@@ -93,26 +95,31 @@ def read_the_tides(station):
 ### --- Get NEMO grid coordinates --------------------------------------- ###
 # GLOBAL VARIABLES:
 # nemo_name
-def get_grid():
+def get_grid(mod_axis):
     ds      = xr.open_dataset(nemo_name)
-    mod_lat = ds.nav_lat.values
-    mod_lon = da.nav_lon.values
-    return (mod_lat, mod_lon)
+    if (mod_axis=="lat"):
+        mod_crd = ds.nav_lat.values
+    if (mod_axis=="lon"):
+        mod_crd = da.nav_lon.values
+    return mod_crd
 ### --------------------------------------------------------------------- ### 
 
 ### --- Match NEMO grid points to tide gauge locations ------------------ ###
-def match_points(mod_lat, mod_lon, stat_lat, stat_lon):
+def match_points(stat_lat, stat_lon):
+    mod_lat = get_grid("lat")
+    mod_lon = get_grid("lon")
     mod_y = np.argmin(mod_lat - stat_lat)
     mod_x = np.argmin(mod_lon - stat_lon)
-    return (mod_y, mod_x)
+    return mod_y, mod_x
 ### --------------------------------------------------------------------- ###
 
 ### --- Extract time series from point in NEMO output closest to station  ###
 # GLOBAL VARIABLES:
 # nemo_name
-def sea_extract(mod_y, mod_x):
+def sea_extract(station):
     ds        = xr.open_dataset('{}'.format(nemo_name))
-    sl        = ds.isel(j=mod_lat, i=mod_lon)
+    mod_ind   = match_points(stat_lat, stat_lon)
+    sl        = ds.isel(j=mod_ind[0], i=mod_ind[1])
     ssh_mod   = sl.ssh.values
     ssh_mod   = sub_marine(ssh_mod)
     return ssh_mod
@@ -158,8 +165,10 @@ def convolute_it(time_series, wavelets)
 ### --- Sum convolution to complete transform --------------------------- ###
 # GLOBAL VARIABLES:
 # basis_fn
-def do_transform(convolv_array)
-    transform = np.nansum(convolv_array,0)
+def do_transform(time_series)
+    convolv_array = convolute_it(time_series,wavelets)
+    raw_transform = np.nansum(convolv_array,0)
+    transform = collect_bins(raw_transform)
     # Normalisation?
     return transform
 ### --------------------------------------------------------------------- ###
@@ -168,13 +177,13 @@ def do_transform(convolv_array)
 # GLOBAL VARIABLES:
 # time_res
 # freq_res
-def collect_bins(transform)
+def collect_bins(unbinned)
     for t in range():
         tnew = time_res*np.int(tnew/time_res)
         for f in range():
             fnew = freq_res*np.int(fnew/freq_res)
-            binned_transform[t,f] = transform[tnew,fnew] 
-    return binned_transform
+            binned[t,f] = unbinned[tnew,fnew] 
+    return binned
 ### --------------------------------------------------------------------- ###
 
 ### --- Write arrays to netcdf ------------------------------------------ ###
