@@ -53,8 +53,9 @@ import numpy as np
 
 ### --- Main --------------------------- ###
 
-fmi_dir ="" # directory of tide gauge data
+fmi_dir ="." # directory of tide gauge data
 station_list = within_bounds(fmi_dir) # this extracts a full list of stations within bounds
+print("Processing {} tide gauge stations".format(np.size(station_list))
 for station in station_list:
     # read in tide gauge data
     tg            = read_the_tides(station)
@@ -63,8 +64,9 @@ for station in station_list:
     mod           = sea_extract(station)
     mod_transform = do_transform(mod) # transform mod
     # write out data to netcdf
-    write_both(original)
-    write_both(transformed)
+    write_both("original")
+    write_both("transformed")
+    print("{} processed".format(station))
 
 ### ------------------------------------ ###
 
@@ -78,14 +80,19 @@ for station in station_list:
 # year_max
 # month_min
 # month_max
+# tide_name
 def within_bounds(source_dir):
-    count = # count number of files
-    ds                 = xr.openmf_dataset('source_dir/{}'.format(tide_name))
-    tg_lat             = ds.latitude.values
-    tg_lon             = ds.longitude.values
+    count = 0 # count number of files
+    station_list = np.empty(dtype='string')
+    # read all unique stations
+    ds                 = xr.open_mfdataset('{}/*_{}{}.nc'.format(source_dir,*,year_min,month_min))    
+    tg_lat             = ds.LATITUDE.values
+    tg_lon             = ds.LONGITUDE.values
     if(lat_min < tg_lat < lat_max .and. lon_min < tg_lon < lon_max):
-        station_list[count] = # extract filename including path   
-        staion_list[station_list=="blank"] = 0
+        station_name        = ds.STATION.values
+        station_list[count] = '{}'.format(station_name)# extract station name
+        count = count + 1
+        station_list = np.squeeze(station_list[0:count])        
     return (station_list)
 ### --------------------------------------------------------------------- ###
 
@@ -94,8 +101,8 @@ def within_bounds(source_dir):
 # tide_name
 def read_the_tides(station_id):
     if (quality_pass(station) = 1)
-        ds                    = xr.open_dataset('{}'.format(tide_name))
-        station_data          = ds.slev.values
+        ds                    = xr.open_mfdataset('{}/*_{}'.format(source_dir,station_id))
+        station_data          = ds.slev.values # account for qc flag here too?
         station_data          = sub_marine(station_data)
     return station_data
 ### --------------------------------------------------------------------- ###
