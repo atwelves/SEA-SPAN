@@ -51,6 +51,25 @@ import numpy as np
 
 ### ------------------------------------ ###
 
+### --- Main --------------------------- ###
+
+fmi_dir ="" # directory of tide gauge data
+station_list = within_bounds(fmi_dir) # this extracts a full list of stations within bounds
+for station in station_list:
+    # read in tide gauge data
+    tg            = read_the_tides(station)
+    tg_transform  = do_transform(tg) # transform obs
+    # read in model output
+    mod           = sea_extract(station)
+    mod_transform = do_transform(mod) # transform mod
+    # write out data to netcdf
+    write_both(original)
+    write_both(transformed)
+
+### ------------------------------------ ###
+
+### --- Top level functions --------------------------------------------- ###
+
 ### --- Set bounds in latitude, longitude, time, and frequency domain --- ###
 # GLOBAL VARIABLES:
 # lat_min
@@ -59,58 +78,26 @@ import numpy as np
 # year_max
 # month_min
 # month_max
-def set_bounds(t_init, t_final):
-    for (x in nx):
-    return (t_init, t_final)
-### --------------------------------------------------------------------- ###
-
-### --- Read tide gauge quality control flags --------------------------- ###
-# GLOBAL VARIABLES:
-# tide_name
-# qc_pass
-# qc_tol
-def quality_pass(station):
-    ds                 = xr.open_dataset('{}'.format(tide_name))
-    qc_flags           = ds.qc.values
-    qc_bad             = np.count_nonzero(qc_flags not in  qc_pass)
-    if(qc_bad > qc_tol)
-        station_filter = 0
-    else
-        station_filter = 1
-    xr.Dataset.close(ds)
-    return station_filter
+def within_bounds(source_dir):
+    count = # count number of files
+    ds                 = xr.openmf_dataset('source_dir/{}'.format(tide_name))
+    tg_lat             = ds.latitude.values
+    tg_lon             = ds.longitude.values
+    if(lat_min < tg_lat < lat_max .and. lon_min < tg_lon < lon_max):
+        station_list[count] = # extract filename including path   
+        staion_list[station_list=="blank"] = 0
+    return (station_list)
 ### --------------------------------------------------------------------- ###
 
 ### --- Read in tide gauge data ----------------------------------------- ###
 # GLOBAL VARIABLES:
 # tide_name
-def read_the_tides(station):
+def read_the_tides(station_id):
     if (quality_pass(station) = 1)
         ds                    = xr.open_dataset('{}'.format(tide_name))
         station_data          = ds.slev.values
         station_data          = sub_marine(station_data)
     return station_data
-### --------------------------------------------------------------------- ###
-
-### --- Get NEMO grid coordinates --------------------------------------- ###
-# GLOBAL VARIABLES:
-# nemo_name
-def get_grid(mod_axis):
-    ds      = xr.open_dataset(nemo_name)
-    if (mod_axis=="lat"):
-        mod_crd = ds.nav_lat.values
-    if (mod_axis=="lon"):
-        mod_crd = da.nav_lon.values
-    return mod_crd
-### --------------------------------------------------------------------- ### 
-
-### --- Match NEMO grid points to tide gauge locations ------------------ ###
-def match_points(stat_lat, stat_lon):
-    mod_lat = get_grid("lat")
-    mod_lon = get_grid("lon")
-    mod_y = np.argmin(mod_lat - stat_lat)
-    mod_x = np.argmin(mod_lon - stat_lon)
-    return mod_y, mod_x
 ### --------------------------------------------------------------------- ###
 
 ### --- Extract time series from point in NEMO output closest to station  ###
@@ -125,6 +112,56 @@ def sea_extract(station):
     return ssh_mod
 ### --------------------------------------------------------------------- ###
 
+### --- Sum convolution to complete transform --------------------------- ###
+# GLOBAL VARIABLES:
+# basis_fn
+def do_transform(time_series)
+    convolv_array = convolute_it(time_series,wavelets)
+    raw_transform = np.nansum(convolv_array,0)
+    transform = collect_bins(raw_transform)
+    # Normalisation?
+    return transform
+### --------------------------------------------------------------------- ###
+
+### --- Write arrays to netcdf ------------------------------------------ ###
+# GLOBAL VARIABLES:
+# output_name
+def write_both(station, obs_transform, mod_transform)
+    transform_out = np.concat(obs_transform,mod_transform)
+    xr.to_netcdf('{}'.format(station))
+    return
+### --------------------------------------------------------------------- ###
+
+### --------------------------------------------------------------------- ###
+
+### --- Secondary functions --------------------------------------------- ###
+
+### --- Read tide gauge quality control flags --------------------------- ###
+# GLOBAL VARIABLES:
+# tide_name
+# qc_pass
+# qc_tol
+def quality_pass(station_id):
+    ds                 = xr.open_dataset('{}'.format(tide_name))
+    qc_flags           = ds.qc.values
+    qc_bad             = np.count_nonzero(qc_flags not in  qc_pass)
+    if(qc_bad > qc_tol)
+        station_filter = 0
+    else
+        station_filter = 1
+    xr.Dataset.close(ds)
+    return station_filter
+### --------------------------------------------------------------------- ### 
+
+### --- Match NEMO grid points to tide gauge locations ------------------ ###
+def match_points(stat_lat, stat_lon):
+    mod_lat = get_grid("lat")
+    mod_lon = get_grid("lon")
+    mod_y = np.argmin(mod_lat - stat_lat)
+    mod_x = np.argmin(mod_lon - stat_lon)
+    return mod_y, mod_x
+### --------------------------------------------------------------------- ###
+
 ### --- Subtract mean sea level from time series, removes NaNs ---------- ###
 # GLOBAL VARIABLES:
 # centre_ssh
@@ -133,6 +170,47 @@ def sub_marine(time_series):
         time_series = time_series - np.nanmean(time_series)
     time_series[np.isnan(time_series)] = 0
     return time_series
+### --------------------------------------------------------------------- ###
+
+### --- Convolute basis functions with time series ---------------------- ###
+# GLOBAL VARIABLES:
+# basis_fn
+def convolute_it(time_series, wavelets)
+    # DECLARE ARRAY:
+    convolv_array = np.copy(wavelets) # copy 3d wavelet array
+    for t in range()
+        convolv_array(t,:,:) = time_series(t) * wavelets(t,:,:)
+    return convolv_array
+### --------------------------------------------------------------------- ###
+
+### --- Do binning? ----------------------------------------------------- ###
+# GLOBAL VARIABLES:
+# time_res
+# freq_res
+def collect_bins(unbinned)
+    for t in range():
+        tnew = time_res*np.int(tnew/time_res)
+        for f in range():
+            fnew = freq_res*np.int(fnew/freq_res)
+            binned[t,f] = unbinned[tnew,fnew]
+    return binned
+### --------------------------------------------------------------------- ###
+
+### --------------------------------------------------------------------- ###
+
+### --- Tertiary functions ---------------------------------------------- ###
+
+### --- Get NEMO grid coordinates --------------------------------------- ###
+# GLOBAL VARIABLES:
+# nemo_name
+def get_grid(mod_axis):
+    ds      = xr.open_dataset(nemo_name)
+    if (mod_axis=="lat"):
+        mod_crd = ds.nav_lat.values
+    if (mod_axis=="lon"):
+        mod_crd = da.nav_lon.values
+    return mod_crd
+### --------------------------------------------------------------------- ### 
 
 ### --- Construct wavelet transform basis functions --------------------- ###
 # GLOBAL VARIABLES:
@@ -151,48 +229,6 @@ def make_waves(t_init, t_final)
     return wavelets
 ### --------------------------------------------------------------------- ###
 
-### --- Convolute basis functions with time series ---------------------- ###
-# GLOBAL VARIABLES:
-# basis_fn
-def convolute_it(time_series, wavelets)
-    # DECLARE ARRAY:
-    convolv_array = np.copy(wavelets) # copy 3d wavelet array
-    for t in range()
-        convolv_array(t,:,:) = time_series(t) * wavelets(t,:,:)
-    return convolv_array
-### --------------------------------------------------------------------- ###
-
-### --- Sum convolution to complete transform --------------------------- ###
-# GLOBAL VARIABLES:
-# basis_fn
-def do_transform(time_series)
-    convolv_array = convolute_it(time_series,wavelets)
-    raw_transform = np.nansum(convolv_array,0)
-    transform = collect_bins(raw_transform)
-    # Normalisation?
-    return transform
-### --------------------------------------------------------------------- ###
-
-### --- Do binning? ----------------------------------------------------- ###
-# GLOBAL VARIABLES:
-# time_res
-# freq_res
-def collect_bins(unbinned)
-    for t in range():
-        tnew = time_res*np.int(tnew/time_res)
-        for f in range():
-            fnew = freq_res*np.int(fnew/freq_res)
-            binned[t,f] = unbinned[tnew,fnew] 
-    return binned
-### --------------------------------------------------------------------- ###
-
-### --- Write arrays to netcdf ------------------------------------------ ###
-# GLOBAL VARIABLES:
-# output_name
-def write_both(station, obs_transform, mod_transform)
-    transform_out = np.concat(obs_transform,mod_transform)
-    xr.to_netcdf('{}'.format(station))
-    return 
 ### --------------------------------------------------------------------- ###
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~SEA-SPAN~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
