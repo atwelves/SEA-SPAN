@@ -52,7 +52,6 @@ import numpy as np
 ### ------------------------------------ ###
 
 ### --- Main --------------------------- ###
-
 fmi_dir ="." # directory of tide gauge data
 station_list = within_bounds(fmi_dir) # this extracts a full list of stations within bounds
 print("Processing {} tide gauge stations".format(np.size(station_list))
@@ -101,7 +100,7 @@ def within_bounds(source_dir):
 # tide_name
 def read_the_tides(station_id):
     if (quality_pass(station) = 1)
-        ds                    = xr.open_mfdataset('{}/*_{}'.format(source_dir,station_id))
+        ds                    = xr.open_mfdataset('{}/*_{}*'.format(source_dir,station_id))
         station_data          = ds.slev.values # account for qc flag here too?
         station_data          = sub_marine(station_data)
     return station_data
@@ -112,7 +111,7 @@ def read_the_tides(station_id):
 # nemo_name
 def sea_extract(station):
     ds        = xr.open_dataset('{}'.format(nemo_name))
-    mod_ind   = match_points(stat_lat, stat_lon)
+    mod_ind   = match_point(stat_lat, stat_lon)
     sl        = ds.isel(j=mod_ind[0], i=mod_ind[1])
     ssh_mod   = sl.ssh.values
     ssh_mod   = sub_marine(ssh_mod)
@@ -123,9 +122,12 @@ def sea_extract(station):
 # GLOBAL VARIABLES:
 # basis_fn
 def do_transform(time_series)
-    convolv_array = convolute_it(time_series,wavelets)
-    raw_transform = np.nansum(convolv_array,0)
-    transform = collect_bins(raw_transform)
+    if(basis=="cosine"):
+        raw_transform
+    else:
+        convolv_array = convolute_it(time_series)
+        raw_transform = np.nansum(convolv_array,0)
+    transform = sort_bins(raw_transform)
     # Normalisation?
     return transform
 ### --------------------------------------------------------------------- ###
@@ -149,7 +151,7 @@ def write_both(station, obs_transform, mod_transform)
 # qc_pass
 # qc_tol
 def quality_pass(station_id):
-    ds                 = xr.open_dataset('{}'.format(tide_name))
+    ds                 = xr.open_mfdataset('{}/{}'.format(source_dir,tide_name))
     qc_flags           = ds.qc.values
     qc_bad             = np.count_nonzero(qc_flags not in  qc_pass)
     if(qc_bad > qc_tol)
@@ -161,9 +163,11 @@ def quality_pass(station_id):
 ### --------------------------------------------------------------------- ### 
 
 ### --- Match NEMO grid points to tide gauge locations ------------------ ###
-def match_points(stat_lat, stat_lon):
+def match_point(station):
     mod_lat = get_grid("lat")
     mod_lon = get_grid("lon")
+    stat_lat = get_point("lat")
+    stat_lon = get_point("lon")
     mod_y = np.argmin(mod_lat - stat_lat)
     mod_x = np.argmin(mod_lon - stat_lon)
     return mod_y, mod_x
@@ -182,24 +186,31 @@ def sub_marine(time_series):
 ### --- Convolute basis functions with time series ---------------------- ###
 # GLOBAL VARIABLES:
 # basis_fn
-def convolute_it(time_series, wavelets)
+def convolute_it(time_series)
     # DECLARE ARRAY:
-    convolv_array = np.copy(wavelets) # copy 3d wavelet array
-    for t in range()
-        convolv_array(t,:,:) = time_series(t) * wavelets(t,:,:)
+    make_space(time_series)
+    tiled_series = np.tile(time_series,np.size(s_space))
+    for tau in range(0,np.size(t_space))
+        make_waves(tau)
+        convolv_array(tau,:,:) = tiled_series(:,:) * wavelets(:,:)
     return convolv_array
 ### --------------------------------------------------------------------- ###
 
-### --- Do binning? ----------------------------------------------------- ###
+### --- Coarsen transform output by binning ----------------------------- ###
 # GLOBAL VARIABLES:
 # time_res
 # freq_res
-def collect_bins(unbinned)
-    for t in range():
-        tnew = time_res*np.int(tnew/time_res)
-        for f in range():
-            fnew = freq_res*np.int(fnew/freq_res)
-            binned[t,f] = unbinned[tnew,fnew]
+def sort_bins(unbinned)
+    # unbinned has two dimensions, t x f
+    # change to four dimensions, tnew x tres x fnew x fres
+    t_old    = np.size(unbinned,1)
+    f_old    = np.size(unbinned,0)
+    t_new    = t_old/t_res
+    f_new    = f_old/t_res
+    # Convert 2d to 4d  
+    unbinned = np.reshape(unbinned,(f_new,freq_res,t_new,time_res))
+    # Sum within each bin
+    binned   = np.nansum(unbinned,(1,3))
     return binned
 ### --------------------------------------------------------------------- ###
 
@@ -215,24 +226,47 @@ def get_grid(mod_axis):
     if (mod_axis=="lat"):
         mod_crd = ds.nav_lat.values
     if (mod_axis=="lon"):
-        mod_crd = da.nav_lon.values
+        mod_crd = ds.nav_lon.values
     return mod_crd
 ### --------------------------------------------------------------------- ### 
+
+### --- Get NEMO grid coordinates --------------------------------------- ###
+# GLOBAL VARIABLES:
+def get_point(stat_axis):
+    ds      = xr.open_dataset('{}/*_{}{}.nc'.format(source_dir,*,year_min,month_min))
+    if (stat_axis=="lat"):
+        stat_crd = ds.LATITUDE.values
+    if (stat_axis=="lon"):
+        stat_crd = ds.LONGITUDE.values
+    return stat_crd
+### --------------------------------------------------------------------- ### 
+
+### --- Make spaces for time and scale ---------------------------------- ###
+
+def make_space(time_series)
+    tspace = np.linspace(0,np.size(time_series),np.size(time_series))
+    sspace = np.linspace(scale_min,scale_max,scale_max-scale_min)
+    return(t_space,s_space)
+
+### --------------------------------------------------------------------- ###
 
 ### --- Construct wavelet transform basis functions --------------------- ###
 # GLOBAL VARIABLES:
 # basis_fn
 # scale_min
 # scale_max
-def make_waves(t_init, t_final)
+def make_waves(t_space,s_space)
     # DECLARE ARRAY
-    # something like a linspace here
+    wavelets = np.zeros((np.size(s_space),np.size(t_space))
 #    if (basis_fn=="Cosine"):
 #        wavelets[:]   = 
 #    if (basis_fn=="Ricker"):
 #        wavelets[:,:] = 
     if (basis_fn=="Gaussian"):
-        wavelets[:,:] = np.exp(-np.square(t[:])/np.square(scale[:]))
+        for s in range(0,np.size(s_space))
+        # use dyadic convention
+        scale = np.power(2,s_space)
+        wavelets[s,:] = np.exp(-np.square(tspace[:])/np.square(scale))
     return wavelets
 ### --------------------------------------------------------------------- ###
 
