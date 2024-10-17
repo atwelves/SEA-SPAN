@@ -27,13 +27,13 @@ month_max   = 4      # Last month of interest
 scale_min   = 0      # Shortest timescale of interest
 scale_max   = 8      # Longest timescale of interest
 #           |
-time_res    = 1      # Time resolution of transform
+time_res    = 24      # Time resolution of transform
 freq_res    = 1      # Frequency resolution of transform
 #           |
 qc_pass     = 1      # Quality control flags deemed good
-qc_tol      = 0      # Number of bad flagged values allowed
+qc_tol      = 25      # Number of bad flagged values allowed
 #           |
-basis_fn    = "Gaussian"      # Basis function for transform
+basis_fn    = "Cosine"      # Basis function for transform
 #           { 'Cosine'
 #             'Ricker'
 #             'Gaussian' }
@@ -48,6 +48,11 @@ centre_ssh  = 1      # Subtract mean from time series (1) or not (0)
 
 import xarray as xr
 import numpy as np
+from pathlib import Path
+import hashlib
+import pandas as pd
+import netCDF4 as nc
+from netCDF4 import Dataset
 
 ### ------------------------------------ ###
 
@@ -63,28 +68,46 @@ import numpy as np
 # month_max
 # tide_name
 def within_bounds(source_dir):
+    path = Path(source_dir)
     count = 0 # count number of files
-    station_list = np.empty(1000,dtype=str)
+    #station_list = np.empty((1000),dtype=str)
     # read all unique stations
-    ds                 = xr.open_mfdataset('{}/*_{}{:02d}.nc'.format(source_dir,year_min,month_min))    
-    tg_lat             = ds.LATITUDE.values
-    tg_lon             = ds.LONGITUDE.values
-    if(lat_min < tg_lat < lat_max and lon_min < tg_lon < lon_max):
-        station_name        = ds.STATION.values
-        station_list[count] = '{}'.format(station_name)# extract station name
-        count = count + 1
-        station_list = np.squeeze(station_list[0:count])        
+    extension = "{}{:02d}.nc".format(year_min,month_min)
+    for filename in path.glob(f"*{extension}"):
+        #ds                 = xr.open_mfdataset('{}/*_{}{:02d}.nc'.format(source_dir,year_min,month_min))    
+        ds                 = xr.open_dataset(filename)
+        tg_lat             = ds.LATITUDE.values
+        tg_lon             = ds.LONGITUDE.values
+        tg_time            = ds.TIME.values
+        print(tg_time)
+        if(lat_min < tg_lat < lat_max and lon_min < tg_lon < lon_max):
+            #station_byte        = ds.STATION.values
+            #print(station_byte)
+            #station_name        = station_byte.astype('UTF-8') 
+            #print(type(station_name))
+            station_name = str(filename)
+            # remove year+month
+            station_name = station_name[:-10]
+            if (quality_pass(source_dir,station_name) == 1):
+                print(station_name)
+                if(count>0):
+                    station_list.append(station_name)
+                else:
+                    station_list = [station_name]
+                count = count + 1
+    #station_list = np.squeeze(station_list[0:count])        
+    print(station_list)
     return (station_list)
 ### --------------------------------------------------------------------- ###
 
 ### --- Read in tide gauge data ----------------------------------------- ###
 # GLOBAL VARIABLES:
 # tide_name
-def read_the_tides(station_id):
-    if (quality_pass(station) == 1):
-        ds                    = xr.open_mfdataset('{}/*_{}*'.format(source_dir,station_id))
-        station_data          = ds.slev.values # account for qc flag here too?
-        station_data          = sub_marine(station_data)
+def read_the_tides(source_dir,station_id):
+    ds                    = xr.open_mfdataset('{}/{}*2019*'.format(source_dir,station_id))
+    print(ds)
+    station_data          = ds.SLEV.values # account for qc flag here too?
+    station_data          = sub_marine(station_data) 
     return station_data
 ### --------------------------------------------------------------------- ###
 
@@ -104,7 +127,7 @@ def sea_extract(station):
 # GLOBAL VARIABLES:
 # basis_fn
 def do_transform(time_series):
-    if(basis=="cosine"):
+    if(basis_fn=="cosine"):
         raw_transform
     else:
         convolv_array = convolute_it(time_series)
@@ -117,9 +140,24 @@ def do_transform(time_series):
 ### --- Write arrays to netcdf ------------------------------------------ ###
 # GLOBAL VARIABLES:
 # output_name
-def write_both(station, obs_series, mod_series):
-    transform_out = np.concat(obs_transform,mod_transform)
-    xr.to_netcdf('{}'.format(station))
+def write_all(station, time_series, transformed_series):#, mod_series):
+    #transform_out = np.concat(obs_transform,mod_transform)
+    #time_series.to_netcdf('{}'.format(station))
+    ##! Need to do this the long way!!
+    outfile           = '{}_proc.nc'.format(station)
+    ncfile            = Dataset(outfile,mode='w')
+    t                 = ncfile.createDimension('t',np.size(time_series))
+    slev              = ncfile.createVariable('ssh',np.float32,('t'))
+    slev[:]           = time_series[:]
+    ncfile.close(); print('Dataset is closed')
+
+    outfile           = '{}_transform.nc'.format(station)
+    ncfile            = Dataset(outfile,mode='w')
+    t                 = ncfile.createDimension('t',np.size(transformed_series,0))
+    s                 = ncfile.createDimension('s',np.size(transformed_series,1))
+    slev_transform    = ncfile.createVariable('ssh_transform',np.float32,('t','s'))
+    slev_transform[:] = transformed_series[:,:]
+    ncfile.close(); print('Dataset is closed')
     return
 ### --------------------------------------------------------------------- ###
 
@@ -132,10 +170,13 @@ def write_both(station, obs_series, mod_series):
 # tide_name
 # qc_pass
 # qc_tol
-def quality_pass(station_id):
-    ds                 = xr.open_mfdataset('{}/{}'.format(source_dir,tide_name))
-    qc_flags           = ds.qc.values
-    qc_bad             = np.count_nonzero(qc_flags not in  qc_pass)
+def quality_pass(source_dir,station_id):
+    print(station_id)
+    ds                 = xr.open_mfdataset('{}/{}*2019*'.format(source_dir,station_id))
+    print(ds)
+    qc_flags           = ds.SLEV_QC.values
+    qc_bad             = np.count_nonzero(qc_flags !=  qc_pass)
+    print("qc_bad:{}".format(qc_bad))
     if(qc_bad > qc_tol):
         station_filter = 0
     else:
@@ -170,10 +211,14 @@ def sub_marine(time_series):
 # basis_fn
 def convolute_it(time_series):
     # DECLARE ARRAY:
-    make_space(time_series)
+    sp = make_space(time_series)
+    t_space = sp[0]
+    s_space = sp[1]
     tiled_series = np.tile(time_series,np.size(s_space))
+    tiled_series = np.transpose(tiled_series)
+    convolv_array = np.zeros((np.size(t_space),np.size(s_space),np.size(t_space)))
     for tau in range(0,np.size(t_space)):
-        wavelets = make_waves(tau)
+        wavelets = make_waves(t_space,s_space)
         convolv_array[tau,:,:] = np.multiply(tiled_series,wavelets)
     return convolv_array
 ### --------------------------------------------------------------------- ###
@@ -187,8 +232,8 @@ def sort_bins(unbinned):
     # change to four dimensions, tnew x tres x fnew x fres
     t_old    = np.size(unbinned,1)
     f_old    = np.size(unbinned,0)
-    t_new    = t_old/t_res
-    f_new    = f_old/t_res
+    t_new    = np.int(t_old/time_res)
+    f_new    = np.int(f_old/freq_res)
     # Convert 2d to 4d  
     unbinned = np.reshape(unbinned,(f_new,freq_res,t_new,time_res))
     # Sum within each bin
@@ -226,8 +271,8 @@ def get_point(stat_axis):
 ### --- Make spaces for time and scale ---------------------------------- ###
 
 def make_space(time_series):
-    tspace = np.linspace(0,np.size(time_series),np.size(time_series))
-    sspace = np.linspace(scale_min,scale_max,scale_max-scale_min)
+    t_space = np.linspace(0,np.size(time_series),np.size(time_series))
+    s_space = np.linspace(scale_min,scale_max,scale_max-scale_min)
     return(t_space,s_space)
 
 ### --------------------------------------------------------------------- ###
@@ -239,7 +284,9 @@ def make_space(time_series):
 # scale_max
 def make_waves(t_space,s_space):
     # DECLARE ARRAY
-    wavelets = np.zeros((np.size(s_space),np.size(t_space)))
+#    wavelets = np.zeros((np.size(s_space),np.size(t_space)))
+#!!!!!!!!!TEST
+    wavelets = np.random.rand(np.size(s_space),np.size(t_space))
 #    if (basis_fn=="Cosine"):
 #        wavelets[:]   = 
 #    if (basis_fn=="Ricker"):
@@ -258,16 +305,17 @@ def make_waves(t_space,s_space):
 fmi_dir ="." # directory of tide gauge data
 station_list = within_bounds(fmi_dir) # this extracts a full list of stations within bounds
 print("Processing {} tide gauge stations".format(np.size(station_list)))
+print(station_list)
 for station in station_list:
     # read in tide gauge data
-    tg            = read_the_tides(station)
+    tg            = read_the_tides(fmi_dir,station)
     tg_transform  = do_transform(tg) # transform obs
     # read in model output
-    mod           = sea_extract(station)
-    mod_transform = do_transform(mod) # transform mod
+    #mod           = sea_extract(station)
+    #mod_transform = do_transform(mod) # transform mod
     # write out data to netcdf
-    write_both("original")
-    write_both("transformed")
+    write_all(station,tg,tg_transform)
+    #write_both("transformed")
     print("{} processed".format(station))
 
 ### ------------------------------------ ###
