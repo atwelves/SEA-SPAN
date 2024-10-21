@@ -36,8 +36,8 @@ qc_pass     = 1      # Quality control flags deemed good
 qc_tol      = 25      # Number of bad flagged values allowed
 #           |
 #basis_fn    = "Cosine"      # Basis function for transform
-basis_fn    = 'Gaussian'
-#basis_fn   = 'Ricker'
+#basis_fn    = 'Gaussian'
+basis_fn   = 'Ricker'
 #           |
 centre_ssh  = 1      # Subtract mean from time series (1) or not (0)
 #           { 1
@@ -309,18 +309,14 @@ def make_waves(t_space,s_space,tau):
         for s in range(0,np.size(s_space)):                  
             scale         = np.power(2,s_space[s])                                  # use dyadic convention
             wavelets[s,:] = gaussian(t_space,tau,scale)
-            #rnge          = np.linspace(0,np.int(scale),np.int(scale)+1)
-            #norm_factor   = np.nansum(gaussian(rnge,0,scale)) 
-            norm_factor   = 2*np.pi*scale/np.sqrt(0.5)
+            norm_factor   = np.sqrt(np.nansum(np.square(wavelets[s,:])))
             wavelets[s,:] = wavelets[s,:] / norm_factor                             # normalisation
     if (basis_fn=="Ricker"):
         # Loop over different scales        
         for s in range(0,np.size(s_space)):
             scale = np.power(2,s_space[s])                                          # use dyadic convention
             wavelets[s,:] = np.multiply((1 - np.square((t_space[:]-tau)/scale)),gaussian(t_space,tau,scale))
-            #rnge          = np.linspace(0,np.int(scale),np.int(scale)+1)
-            #norm_factor   = np.nansum(np.multiply((1 - np.square(rnge[:]/scale)),gaussian(rnge[:],0,scale)))
-            norm_factor   = 2*np.pi*scale/np.sqrt(2.5)
+            norm_factor   = np.sqrt(np.nansum(np.square(wavelets[s,:])))
             wavelets[s,:] = wavelets[s,:] / norm_factor                             # normalisation
     return wavelets
 ### --------------------------------------------------------------------- ###
