@@ -2,16 +2,13 @@
 
 - 1 script to download (?)
 - 1 script to process
-    - 1 function to select bounds in lat, lon, time, and frequency domain
-    - 1 function to read tide gauge qc flags
-    - 1 function to read tide gauge data 
-    - 1 function to read NEMO grid
-    - 1 function to match tide gauge coordinates to NEMO grid points
-    - 1 function to extract station time series from full model output
-    - 1 function to set time and frequency binning
-    - 1 function to construct basis functions
-    - 1 function to do convolution
-    - 1 function to do time/frequency binning
+      - Top level functions
+          - *within_bounds* takes a given directory and searches for data belonging to tide gauges within specified latitude and longitude limits, then checks if these stations have a satisfactory number of data values that pass quality control. It returns the matching stations as a list.
+          - *read_the_tides* takes a given directory and station name, reads in sea level data, and converts to a mean-centred time series without gaps.  It returns this series as output.
+          - *sea_extract* takes a given directory and station name and extracts, from the gridded model output, a mean-centred time series without gaps.  It returns this series as output.
+          - *do_transform* takes a given time series, performs a Fourier or wavelet transform, and returns the normalised transform as an output.
+          - *write_all* takes a given station name, plus original and transformed series from both tide gauge data and model outputs, and writes out netCDF files.
+          - *
 - 1 script to plot outputs
 
 Processing script produces a NetCDF file with dimensions 
