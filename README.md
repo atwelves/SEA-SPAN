@@ -27,7 +27,17 @@ Second level functions
 
       - "sort_bins" takes a given two dimensional array, and sorts it into bins along each axis, effectively coarsening the resolution, and returns this coarsened array as output.
           
-- 1 script to plot outputs
+Third level functions
+
+      - "get_grid" takes a given directory and model axis (lat/lon), and extracts the model grid from files in that directory, returning latitude or longitude grid as output.
+
+      - "get_point" takes a given directory, station name and axis (lat/lon), extracts the coordinates of the station, and returns either the station latitude or longitude as output.
+
+      - "make_waves" takes a given of values in time and scale space, plus a wavelet centering time (tau), and constructs a series of waveforms centred at tau, with logarithmically varying scale.  It returns this as output in the form of a two dimensional array.
+
+Fourth level functions
+
+      - "gaussian" takes a given time range, centre (tau) and scale, then constructs a one-dimensional gaussian distribution centred at tau, which it returns as output. 
 
 Processing script produces a NetCDF file with dimensions 
 
