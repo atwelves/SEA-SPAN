@@ -56,7 +56,9 @@ for st in stations:
     dif = mod - obs
     
     plt.figure(figsize=(20,7))
+    # plot threshold exceedance for transform of tide gauge data
     plt.contourf(10000*obs,[0,100,100000],colors=('w',season_colors[3],season_colors[3]),alpha=0.5)
+    # plot threshold exceedance for transform of model output
     plt.contourf(10000*mod,[0,100,100000],colors=('w',season_colors[1],season_colors[1]),alpha=0.5)
     plt.grid()
     plt.xticks([0,31,61,92,123,152,183,213,244,274,305,336],['O','N','D','J','F','M','A','M','J','J','A','S'],fontsize=20)
