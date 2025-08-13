@@ -22,29 +22,34 @@ stations = ['Kemi','Oulu','Raahe',
 
 letter = ['a','b','c','d','e','f','g','h','i','j','k','l','m']
 
-markers = ['v','^','>',
-           '<','8',
-           'p','s','h',
-           'o',
-           '*','P','X','D']
-
 for st in stations:
+    # declare array for wavelet transform of tide gauge data
     obs = np.zeros((16,366))
+    # declare array for wavelet transform of model output
     mod = np.zeros((16,366))
     i = i+1
-    
+
+    # tide gauge
     ds = xr.open_mfdataset('{}_obs_meso*'.format(st))
+    # read in times for x axis
     time_stamp = ds.date.values
+    # read in mesoscale component of tide gauge transform
     mes = ds.__xarray_dataarray_variable__.values
     ds = xr.open_mfdataset('{}_obs_syno*'.format(st))
+    # read in synoptic component of tide gauge transform
     syn = ds.__xarray_dataarray_variable__.values
+    # concatenate mesoscale and synoptic components
     obs[0:8,:] = np.transpose(mes[:,:])
     obs[8:16,:] = np.transpose(syn[:,:])
 
+    # model output
     ds = xr.open_mfdataset('{}_mod_meso*'.format(st))
+    # read in mesoscale component of tide gauge transform
     mes = ds.__xarray_dataarray_variable__.values
     ds = xr.open_mfdataset('{}_mod_syno*'.format(st))
+    # read in synoptic component of tide gauge transform
     syn = ds.__xarray_dataarray_variable__.values
+    # concatenate mesoscale and synoptic components
     mod[0:8,:] = np.transpose(mes[:,:])
     mod[8:16,:] = np.transpose(syn[:,:])
 
