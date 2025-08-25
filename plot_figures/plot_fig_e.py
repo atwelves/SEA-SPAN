@@ -7,45 +7,78 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 import cmocean as cm
 
-# February 2020 record high sea level at Rauma
-station = 'Rauma'
+station = 'Pori'
 month   = 2
 
 # time series
-#obs_series   = xr.open_dataarray
-#mod_series   = xr.open_dataarray
+ds   = xr.open_dataset('time_series/data/BO_TS_TG_{}_processed_UNFILTERED.nc'.format(station))
+print(ds)
+obs  = ds.ssh_obs
+obs  = obs - np.nanmean(obs)
+print(obs)
+mod  = ds.ssh_mod
+mod  = mod - np.nanmean(mod)
+print(mod)
 
-# declare array for wavelet transform of tide gauge data
 obs_spectrum = np.zeros((29,16))
-# declare array for wavelet transform of model output
 mod_spectrum = np.zeros((29,16))
 
-# mesoscale component of tide gauge transform 
+# transforms
 meso           = xr.open_dataarray('{}_obs_meso_{}.nc'.format(station,month)).values
-# synoptic component
+# synoptic
 syno           = xr.open_dataarray('{}_obs_syno_{}.nc'.format(station,month)).values
-# concatenate mesoscale and synoptic components of tide gauge transform
+# concatenate
 obs_spectrum[:,0:8]  = meso
 obs_spectrum[:,8:16] = syno
 
-# mesoscale component of model output transform
+# mesoscale
 meso           = xr.open_dataarray('{}_mod_meso_{}.nc'.format(station,month)).values
-# synoptic component of model output transform
+# synoptic
 syno           = xr.open_dataarray('{}_mod_syno_{}.nc'.format(station,month)).values
-# concatenate mesoscale and synoptic components
+# concatenate
 mod_spectrum[:,0:8]  = meso
 mod_spectrum[:,8:16] = syno
 
-# find anomaly in wavelet space
 dif_spectrum = mod_spectrum - obs_spectrum
 
-# plot wavelet transform anomaly for Rauma during February 2020
-plt.figure()
-plt.pcolormesh(10000*np.transpose(dif_spectrum),cmap='cmo.delta_r')
+plt.figure(figsize=(30,10))
+#plt.pcolormesh(10000*np.transpose(dif_spectrum),cmap='cmo.delta_r')
+#plt.colorbar()
+#plt.plot(np.linspace(0,29,29*24),10*obs[123*24:152*24],linewidth=3,color=(230/255,97/255,1/255))
+#plt.plot(np.linspace(0,29,29*24),10*mod[123*24:152*24],linewidth=3,color=(230/255,97/255,1/255),linestyle='--')
+
+plt.pcolormesh(np.linspace(1,30,30),np.linspace(0,16,17),10000*np.transpose(dif_spectrum),shading='flat',cmap='cmo.tarn_r')
+#plt.contourf(10000*np.transpose(dif_spectrum),cmap='cmo.tarn_r')
+plt.grid()
+plt.xticks(np.linspace(1,29,29),fontsize=20)
+plt.yticks([-12,-9.5,-7,-4.5,-2,  0,4,8,12,  18.5,21,23.5,26,28.5,31,33.5],['-50','','0','','50', '4','16','64','256',  '','0','','50','','100',''],fontsize=25)
+plt.tick_params(axis='y', which='both', labelleft='off', labelright='on')
 plt.colorbar()
-plt.title('Wavelet power anomaly (cm$^{2}$)')
+#cb=plt.colorbar(orientation='horizontal')
+#cb.ax.tick_params(labelsize=30) 
+plt.plot(np.linspace(1,30,29*24),10*obs[123*24:152*24]+19,linewidth=3,color='k')
+plt.plot(np.linspace(1,30,29*24),10*mod[123*24:152*24]+19,linewidth=3,color='k',linestyle='--')
+plt.plot(np.linspace(1,30,29*24),10*(mod[123*24:152*24]-obs[123*24:152*24])-7,linewidth=3,color='k')
+plt.plot(np.linspace(1,30,29*24),np.linspace(0,0,29*24),'k')
+plt.plot(np.linspace(1,30,29*24),np.linspace(16,16,29*24),'k')
+plt.plot(np.linspace(1,30,29*24),np.linspace(21,21,29*24),'k')
+plt.plot(np.linspace(1,30,29*24),np.linspace(-7,-7,29*24),'k')
+#plt.title('Wavelet power anomaly (cm$^{2}$)')
 plt.clim(-350,350)
-plt.xlabel('February 2020')
-plt.ylabel('Scale')
+plt.xlabel('February 2020',fontsize=30)
+plt.ylabel('Period (hours)    ',fontsize=30)
+plt.title('{}'.format(station),fontsize=30)
+plt.ylim(-13,33)
 plt.savefig('{}_transform_zoom_{}'.format(station,month))
 
+print(10000*np.nanmax(dif_spectrum))
+print(10000*np.nanmin(dif_spectrum))
+
+#plt.yticks(np.linspace(-8,16,13))
+#plt.figure(figsize=(20,10))
+#plt.plot(obs[123*24:152*24])
+#plt.plot(mod[123*24:152*24])
+#plt.xticks(np.linspace(0,29*24,29))
+
+#plt.grid()
+#plt.savefig('{}zoom_{}'.format(station,month))

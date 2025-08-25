@@ -22,28 +22,20 @@ stations = ['Kemi','Oulu','Raahe',
 
 letter = ['a','b','c','d','e','f','g','h','i','j','k','l','m']
 
-# different marker for each station
 markers = ['v','^','>',
            '<','8',
            'p','s','h',
            'o',
            '*','P','X','D']
 
-# loop over stations
 for st in stations:
     i = i+1
     plt.figure(figsize=(10,10))
-    # read in mesoscale transform of tide gauge data
     ds = xr.open_mfdataset('{}_obs_meso*'.format(st))
-    # date of Rauma record high sea level
     tt = ds.date.isel(date=144).values
-    # sum over frequencies in mesoscale range
     mes = ds.__xarray_dataarray_variable__.sum(dim='freq').values
-    # read in synoptic transform of tide gauge data
     ds = xr.open_mfdataset('{}_obs_syno*'.format(st))
-    # sum over frequencies in synoptic range
     syn = ds.__xarray_dataarray_variable__.sum(dim='freq').values
-    # group dates by month and give each month a differen colour marker
     color_range = np.arange(366)
     color_range[0:31]=1
     color_range[31:61]=2
@@ -57,14 +49,12 @@ for st in stations:
     color_range[274:305]=10
     color_range[305:336]=11
     color_range[336:366]=12
-
-    # plot synoptic component against mesoscale component
+    
     plt.scatter(mes,syn,s=250,marker=markers[i],label='{}'.format(st),c=color_range,cmap='twilight',edgecolors='k')
-    # plot Rauma with double sized marker
     plt.scatter(mes[144],syn[144],s=500,marker=markers[i],label='{}'.format(st),c='red',edgecolors='k')
     plt.colorbar()
-    plt.ylabel('Synoptic scale variability (m²)',fontsize=25)
-    plt.xlabel('Mesoscale variability (m²)',fontsize=25)
+    plt.ylabel('Synoptic scale dispersion (m²)',fontsize=25)
+    plt.xlabel('Mesoscale dispersion (m²)',fontsize=25)
     plt.xlim(-0.01,0.5)
     plt.ylim(-0.01,0.5)
     plt.grid()
@@ -88,17 +78,11 @@ for st in stations:
     # now plot model results
 
     plt.figure(figsize=(10,10))
-    # read in mesoscale transform of model output
     ds = xr.open_mfdataset('{}_mod_meso*'.format(st))
-    # sum over frequencies in mesoscale range
     mes_mod = ds.__xarray_dataarray_variable__.sum(dim='freq').values
-    # read in synoptic transform of model output
     ds = xr.open_mfdataset('{}_mod_syno*'.format(st))
-    # sum over frequencies in synoptic range
     syn_mod = ds.__xarray_dataarray_variable__.sum(dim='freq').values
-    # plot synoptic component against mesoscale component
     plt.scatter(mes_mod,syn_mod,s=250,marker=markers[i],label='{}'.format(st),c=color_range,cmap='twilight',edgecolors='k')
-    # plot Rauma event with double sized marker
     plt.scatter(mes_mod[144],syn_mod[144],s=500,marker=markers[i],label='{}'.format(st),c='red',edgecolors='k')
     plt.colorbar()
     plt.ylabel('Synoptic scale dispersion (m²)',fontsize=25)
@@ -108,31 +92,30 @@ for st in stations:
     plt.ylim(-0.01,0.5)
     plt.savefig('ratio_mod_seasonal_{}.png'.format(st))
 
-    # now plot anomaly
+# now plot anomaly (UNFILTERED)
 
-    plt.figure(figsize=(10,10))
+    plt.figure(figsize=(10,9))
     ds = xr.open_dataset('wavelet_transforms/data/BO_TS_TG_{}_Ricker_UNFILTERED.nc'.format(st))
-    # find mesoscale component of model-data anomaly
     mes_dif = (mes_mod-mes)
-    # find synoptic-scale component of model-data anomaly
     syn_dif = (syn_mod-syn)
     lim = np.nanmax([np.nanmax(abs(mes_dif)),np.nanmax(abs(syn_dif))])/0.9
     plt.xlim(-lim,lim)
     plt.ylim(-lim,lim)
-    plt.fill_between([-lim,0],[0,0],[lim,lim],color=(0.9,0.9,0.9))
-    plt.fill_between([0,lim],[-lim,-lim],[0,0],color=(0.9,0.9,0.9))
-    # plot synoptic component against mesoscale component
+    plt.fill_between([-lim,0],[0,0],[lim,lim],color=(0.8,0.8,0.8))
+    plt.fill_between([0,lim],[-lim,-lim],[0,0],color=(0.8,0.8,0.8))
     plt.scatter(mes_dif,syn_dif,s=250,marker=markers[i],label='{}'.format(st),c=color_range,cmap='twilight',edgecolors='k')
-    # plot Rauma event with double sized marker
-    plt.scatter(mes_dif[144],syn_dif[144],s=750,marker=markers[i],label='{}'.format(st),c=144,cmap='twilight',edgecolors='k')
+    plt.scatter(mes_dif[144],syn_dif[144],s=1500,marker=markers[i],label='{}'.format(st),facecolors='none',edgecolors='k',linewidths=3)
     plt.colorbar()
 
-    plt.xticks(fontsize=15)
-    plt.yticks(fontsize=15)
-    plt.ylabel('Synoptic scale variability anomaly (m²)',fontsize=20)
-    plt.xlabel('Mesoscale variability anomaly (m²)',fontsize=20)
-    plt.title('({}) {}'.format(letter[i],st),fontsize=20)
+    plt.xticks(fontsize=30,rotation=45)
+    plt.yticks(fontsize=30,rotation=45)
+    plt.ylabel('$W²_{syn}$ (m²)',fontsize=45)
+    plt.xlabel('$W²_{meso}$ (m²)',fontsize=45)
+    plt.title('({}) {}'.format(letter[i],st),fontsize=45)
     plt.grid()
+    plt.locator_params(axis='y', nbins=7)
+    plt.locator_params(axis='x', nbins=7)
+    plt.tight_layout()
     plt.savefig('ratio_amom_seasonal_{}.png'.format(st))
 
 

@@ -22,47 +22,56 @@ stations = ['Kemi','Oulu','Raahe',
 
 letter = ['a','b','c','d','e','f','g','h','i','j','k','l','m']
 
+markers = ['v','^','>',
+           '<','8',
+           'p','s','h',
+           'o',
+           '*','P','X','D']
+
 for st in stations:
-    # declare array for wavelet transform of tide gauge data
     obs = np.zeros((16,366))
-    # declare array for wavelet transform of model output
     mod = np.zeros((16,366))
     i = i+1
-
-    # tide gauge
+    
     ds = xr.open_mfdataset('{}_obs_meso*'.format(st))
-    # read in times for x axis
     time_stamp = ds.date.values
-    # read in mesoscale component of tide gauge transform
     mes = ds.__xarray_dataarray_variable__.values
     ds = xr.open_mfdataset('{}_obs_syno*'.format(st))
-    # read in synoptic component of tide gauge transform
     syn = ds.__xarray_dataarray_variable__.values
-    # concatenate mesoscale and synoptic components
     obs[0:8,:] = np.transpose(mes[:,:])
     obs[8:16,:] = np.transpose(syn[:,:])
 
-    # model output
     ds = xr.open_mfdataset('{}_mod_meso*'.format(st))
-    # read in mesoscale component of tide gauge transform
     mes = ds.__xarray_dataarray_variable__.values
     ds = xr.open_mfdataset('{}_mod_syno*'.format(st))
-    # read in synoptic component of tide gauge transform
     syn = ds.__xarray_dataarray_variable__.values
-    # concatenate mesoscale and synoptic components
     mod[0:8,:] = np.transpose(mes[:,:])
     mod[8:16,:] = np.transpose(syn[:,:])
 
     dif = mod - obs
     
     plt.figure(figsize=(20,7))
-    # plot threshold exceedance for transform of tide gauge data
+    plt.plot([92,92],[0,15],'k',linewidth=5,linestyle='--')
+    plt.plot([183,183],[0,15],'k',linewidth=5,linestyle='--')
+    plt.plot([274,274],[0,15],'k',linewidth=5,linestyle='--')
     plt.contourf(10000*obs,[0,100,100000],colors=('w',season_colors[3],season_colors[3]),alpha=0.5)
-    # plot threshold exceedance for transform of model output
     plt.contourf(10000*mod,[0,100,100000],colors=('w',season_colors[1],season_colors[1]),alpha=0.5)
     plt.grid()
-    plt.xticks([0,31,61,92,123,152,183,213,244,274,305,336],['O','N','D','J','F','M','A','M','J','J','A','S'],fontsize=20)
-    plt.yticks(fontsize=20)
-    plt.title('({}) {}'.format(letter[i],st),fontsize=40)
+    plt.xlim(0,366)
+    plt.xticks([0,31,61,92,123,152,183,213,244,274,305,336],['       O'
+                                                            ,'       N'
+                                                            ,'       D'
+                                                            ,'       J'
+                                                            ,'       F'
+                                                            ,'       M'
+                                                            ,'       A'
+                                                            ,'       M'
+                                                            ,'       J'
+                                                            ,'       J'
+                                                            ,'       A'
+                                                            ,'       S'],fontsize=40)
+    plt.yticks([0,4,8,12],['4','16','64','256'],fontsize=40)
+    plt.ylabel('Period (hours)',fontsize=50)
+    plt.title('({}) {}'.format(letter[i],st),fontsize=50)
     plt.savefig('{}_threshold'.format(st))
 

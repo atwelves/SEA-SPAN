@@ -12,7 +12,7 @@ stations = ['Kemi','Oulu','Raahe',
             'Pietarsaari','Vaasa',
             'Kaskinen','Pori','Rauma',
             'Degerby',
-            'Hanko','Helsinki','Hamina']
+            'Hanko','Helsinki','Porvoo','Hamina']
 
 # Create empty arrays to hold spectra
 obs_spectrum = np.zeros((16))
@@ -52,9 +52,9 @@ for st in stations:
     mod_peak_max       = mod_spectrum[mod_peak_position]
     
     # plot figure
-    plt.figure(figsize=(40,16))
+    plt.figure(figsize=(20,8))
     # shading for mesoscale part of spectrum
-    plt.fill_betweenx([0,1.05*10000*np.nanmax(obs_spectrum)],[0,0],[2,2],color=(0.9,0.9,0.9))
+    plt.fill_betweenx([0,1.05*10000*np.nanmax(obs_spectrum)],[0,0],[2,2],color=(0.8,0.8,0.8))
     # tide gauge
     plt.plot(tau,10000*obs_spectrum,linewidth=5,color=(27/255,158/255,119/255))
     plt.scatter(tau,10000*obs_spectrum,s=1000,color=(27/255,158/255,119/255),alpha=0.5,facecolor='none',linewidth=4)
@@ -64,12 +64,14 @@ for st in stations:
     plt.scatter(tau,10000*mod_spectrum,s=1000,color=(117/255,112/255,179/255),alpha=0.5,facecolor='none',linewidth=4)
     plt.scatter(mod_peak_freq,10000*mod_peak_max,s=1000,color=(117/255,112/255,179/255),alpha=0.5,label='{:.1f} hrs    {:.1f} cm² day⁻¹'.format(mod_peak_freq*24,mod_peak_max*10000))
     # formatting
-    plt.xticks([5,10,15,20,25,30],fontsize=60)
-    plt.yticks(fontsize=60)
+    plt.xticks([5,10,15,20,25,30],fontsize=40)
+    plt.yticks(fontsize=40)
     plt.xlim(0,31)
-    plt.xlabel('Days',fontsize=60)
+    plt.xlabel('Days',fontsize=50)
     plt.ylim(0,1.05*10000*np.nanmax(obs_spectrum))
-    plt.ylabel('Spectral density (cm² day⁻¹)',fontsize=60)
+    plt.ylabel(r'$\overline{W}$² (cm² day⁻¹)', fontsize=50)
     plt.grid()
-    plt.legend(fontsize=80)
+    plt.locator_params(axis='y', nbins=4)
+    plt.legend(fontsize=50)
+    plt.tight_layout()
     plt.savefig('{}_tavgd_spectrum.png'.format(st))
