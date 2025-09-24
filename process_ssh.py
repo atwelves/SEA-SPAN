@@ -8,7 +8,10 @@
 
 ### --- GLOBAL VARIABLES ---------------------------------------------- ###
 #           |
-nemo_name   = "WW_ORIGINAL"    # Name of NEMO model output file
+#obs/mod
+setting     = 'mod'
+#
+nemo_name   = "UNFILTERED"    # Name of NEMO model output file
 nemo_freq   = "1h"
 #nemo_freq   = "1d" 
 #           |
@@ -16,24 +19,29 @@ nemo_freq   = "1h"
 #           |
 #output_name =       # Output netcdf naming convention
 #           |
-lat_min     = 50      # Southern edge of region of interest     
+lat_min     = 65.6      # Southern edge of region of interest     
 lat_max     = 80      # Northern edge of region of interest
 lon_min     = 0      # Western edge of region of interest
 lon_max     = 50      # Eastern edge of region of interest
 #           |
 year_min    = 2019      # First year of interest
-year_max    = 2019      # Last year of interest
-month_min   = 1      # First month of interest
-month_max   = 4      # Last month of interest
+year_max    = 2020      # Last year of interest
+month_min   = 10      # First month of interest
+month_max   = 9      # Last month of interest
 #           |   
-scale_min   = 0      # Shortest timescale of interest
-scale_max   = 12      # Longest timescale of interest
+freq_mode   =  'meso'
+if (freq_mode == 'meso'):
+    scale_min   =  0.0      # Shortest timescale of interest
+    scale_max   =  3.5      # Longest timescale of interest
+elif (freq_mode == 'syno'): 
+    scale_min   =  4.0      # Shortest timescale of interest
+    scale_max   =  7.5      # Longest timescale of interest
 #           |
 time_res    = 24      # Time resolution of transform
-freq_res    = 1      # Frequency resolution of transform
+freq_res    = 8     # Number of scales to consider
 #           |
 qc_pass     = 1      # Quality control flags deemed good
-qc_tol      = 25      # Number of bad flagged values allowed
+qc_tol      = 2500      # Number of bad flagged values allowed
 #           |
 #basis_fn    = "Cosine"      # Basis function for transform
 #basis_fn    = 'Gaussian'
@@ -54,6 +62,7 @@ import hashlib
 import pandas as pd
 import netCDF4 as nc
 from netCDF4 import Dataset
+import csv
 
 ### ------------------------------------ ###
 
@@ -81,7 +90,7 @@ def within_bounds(source_dir):
             station_name = str(filename)                 # extract station name from filename
             station_name = station_name[:-10]            # remove time extension from name
             # check if station has good quality data
-            if (quality_pass(source_dir,station_name) == 1):
+            if (quality_pass(station_name) == 1):
                 if(count>0):
                     station_list.append(station_name)    # add station to list
                 else:
@@ -93,10 +102,25 @@ def within_bounds(source_dir):
 ### --- Read in tide gauge data ----------------------------------------- ###
 # GLOBAL VARIABLES:
 # tide_name
-def read_the_tides(source_dir,station_id):
-    ds                    = xr.open_mfdataset('{}/{}*2019*'.format(source_dir,station_id))
-    station_data          = ds.SLEV.values           # read sea level from tide gauge
-    station_data          = sub_marine(station_data) # subtract mean sea level
+def read_the_tides(station_id):
+#    ds                    = xr.open_mfdataset('{}*'.format(station_id))#,year_min))
+#    station_data          = ds.SLEV.values           # read sea level from tide gauge
+    with open('{}_hourlystats_N2000.txt'.format(station_id), newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=' ',quotechar='|')
+        date_time = [ row[1] for row in reader ]
+    dates = np.asarray(date_time,dtype='str')
+    start_date = np.argwhere(dates=='20191001T000000')
+    end_date   = np.argwhere(dates=='20201001T000000')
+    start_date = int(start_date)
+    end_date   = int(end_date)
+    with open('{}_hourlystats_N2000.txt'.format(station_id), newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=' ',quotechar='|')
+        ssh = [ row[2] for row in reader ]
+    station_data           = np.asarray(ssh,dtype=np.float32)
+    station_data = np.squeeze(station_data[start_date:end_date+1])
+    #station_data          = sub_marine(station_data) # subtract mean sea level
+    #convert units!
+    station_data = station_data/1000
     return station_data
 ### --------------------------------------------------------------------- ###
 
@@ -104,12 +128,21 @@ def read_the_tides(source_dir,station_id):
 # GLOBAL VARIABLES:
 # nemo_name
 # nemo_freq
-def sea_extract(source_dir,station_id):
-    ds        = xr.open_mfdataset('{}/{}/{}_{}_*'.format(source_dir,nemo_name,nemo_name,nemo_freq))
-    mod_ind   = match_point(source_dir,station_id)  # find point in model domain closest to tide gauge
+def sea_extract(station_id):
+    ds        = xr.open_mfdataset('{}/full_results/{}_{}_*'.format(nemo_name,nemo_name,nemo_freq))
+    mod_ind   = match_point(station_id)  # find point in model domain closest to tide gauge
     sl        = ds.isel(y=mod_ind[0], x=mod_ind[1]) # extract this point from the model output
-    ssh_mod   = sl.zos.values                       # read in sea level from model output
-    ssh_mod   = sub_marine(ssh_mod)                 # subtract mean level
+    ssh_mod   = sl.zos                       # read in sea level from model output
+    ssh_mod_mean = ssh_mod.mean(dim='time_counter')
+    ssh_mod   = ssh_mod - ssh_mod_mean
+    ssh_mod   = ssh_mod#.values
+    #ssh_mod   = sub_marine(ssh_mod)                 # subtract mean level
+    plat      = ds.nav_lat.isel(y=mod_ind[0], x=mod_ind[1]).values
+    plon      = ds.nav_lon.isel(y=mod_ind[0], x=mod_ind[1]).values
+    print(plat)
+    print(plon)
+    print(mod_ind[0])
+    print(mod_ind[1])
     return ssh_mod
 ### --------------------------------------------------------------------- ###
 
@@ -122,6 +155,7 @@ def do_transform(time_series):
         raw_transform
     # for wavelet transform...
     else:
+        print('apply Ricker transform')
         convolution = convolute_it(time_series)                            # convolute time series with wavelet basis
         convolv_array = convolution[0]                                     # convolved array
         normal_array  = convolution[1]                                     # normalisation factor
@@ -134,36 +168,26 @@ def do_transform(time_series):
     return transform
 ### --------------------------------------------------------------------- ###
 
-### --- Write arrays to netcdf ------------------------------------------ ###
+### --- Sum convolution to complete transform --------------------------- ###
 # GLOBAL VARIABLES:
-# output_name
-def write_all(station, time_series, transformed_series, time_series2, transformed_series2):
-    sdiff             = np.squeeze(time_series2) - np.squeeze(time_series)             # model sea level anomaly
-    # 
-    outfile           = '{}_processed.nc'.format(station)                                   # create file to hold time series
-    ncfile            = Dataset(outfile,mode='w')
-    t                 = ncfile.createDimension('t',np.size(time_series))
-    slev_obs          = ncfile.createVariable('ssh_obs',np.float32,('t'))              # tide gauge time series
-    slev_mod          = ncfile.createVariable('ssh_mod',np.float32,('t'))              # (extracted) model time series
-    slev_diff         = ncfile.createVariable('ssh_diff',np.float32,('t'))             # model sea level anomaly
-    slev_obs[:]       = time_series[:]
-    slev_mod[:]       = time_series2[:]
-    slev_diff[:]      = sdiff[:]
-    ncfile.close(); print('Dataset is closed')
-    # 
-    tdiff               = transformed_series2 - transformed_series                     # model transform anomaly  
-    #
-    outfile             = '{}_{}.nc'.format(station,basis_fn)                          # create file to hold transforms
-    ncfile              = Dataset(outfile,mode='w')
-    t                   = ncfile.createDimension('t',np.size(transformed_series,1))    # time dimension
-    s                   = ncfile.createDimension('s',np.size(transformed_series,0))    # scale dimension
-    transform_obs       = ncfile.createVariable('obs_transform',np.float32,('s','t'))  # tide gauge transform
-    transform_mod       = ncfile.createVariable('mod_transform',np.float32,('s','t'))  # (extracted) model transform
-    transform_diff      = ncfile.createVariable('diff_transform',np.float32,('s','t')) # model transform anomaly
-    transform_obs[:,:]  = transformed_series[:,:]
-    transform_mod[:,:]  = transformed_series2[:,:]
-    transform_diff[:,:] = tdiff[:,:]
-    ncfile.close(); print('Dataset is closed')
+# basis_fn
+def do_transform_mod(time_series):
+    # for Fourier transform...
+    if(basis_fn=="Cosine"):
+        raw_transform
+    # for wavelet transform...
+    else:
+        print('apply Ricker transform')
+        raw_transform = convolute_mod(time_series)                            # convolute time series with wavelet basis
+        #raw_transform = convolv_array.sum(dim='time_counter')                         # integrate over length of time series
+        #normal_tot    = np.nanmin(np.nansum(np.nansum(normal_array,2),0))
+        #raw_transform = np.divide(raw_transform,normal_tot)                # normalise wavelet transform
+        #raw_transform = np.square(raw_transform)                           # spectrum of wavelet transform
+        #raw_transform = raw_transform.transpose
+        #print(raw_transform)
+        #raw_transform.to_netcdf('transform_Rauma.nc')
+        # transpose
+    #transform = sort_bins(raw_transform)                                   # reduce time resolution of output
     return
 ### --------------------------------------------------------------------- ###
 
@@ -176,8 +200,8 @@ def write_all(station, time_series, transformed_series, time_series2, transforme
 # tide_name
 # qc_pass
 # qc_tol
-def quality_pass(source_dir,station_id):
-    ds                 = xr.open_mfdataset('{}/{}*2019*'.format(source_dir,station_id))
+def quality_pass(station_id):
+    ds                 = xr.open_mfdataset('{}*'.format(station_id))#,year_min))
     qc_flags           = ds.SLEV_QC.values                      # read quality control values
     qc_bad             = np.count_nonzero(qc_flags !=  qc_pass) # count bad quality data
     # Set threshold for number of 'bad' values
@@ -190,14 +214,14 @@ def quality_pass(source_dir,station_id):
 ### --------------------------------------------------------------------- ### 
 
 ### --- Match NEMO grid points to tide gauge locations ------------------ ###
-def match_point(source_dir,station_id):
-    mod_lat = get_grid(source_dir,"lat")                                # extract latitude axis from model domain
-    mod_lon = get_grid(source_dir,"lon")                                # extract longitude axis from model domain
-    stat_lat = get_point(source_dir,station_id,"lat")                   # extract latitude coordinate for station
-    stat_lon = get_point(source_dir,station_id,"lon")                   # extract longitude coordinate for station
+def match_point(station_id):
+    mod_lat = get_grid("lat")                                # extract latitude axis from model domain
+    mod_lon = get_grid("lon")                                # extract longitude axis from model domain
+    stat_lat = get_point(station_id,"lat")                   # extract latitude coordinate for station
+    stat_lon = get_point(station_id,"lon")                   # extract longitude coordinate for station
     # calculate distance from each model point to station
     diff_latlon = np.square(mod_lat-stat_lat)+np.square((mod_lon-stat_lon)*np.cos(stat_lat*np.pi/180))
-    ds        = xr.open_mfdataset('{}/{}/{}_{}_*'.format(source_dir,nemo_name,nemo_name,nemo_freq))
+    ds        = xr.open_mfdataset('{}/{}_{}_*'.format(nemo_name,nemo_name,nemo_freq))
     sl        = ds.isel(time_counter=0)                                 # extract initial time slice
     ssh_mod   = sl.zos.values                                           # extract initial sea level field
     diff_latlon[ssh_mod==0] = np.nan                                    # disregard land pointd
@@ -206,30 +230,21 @@ def match_point(source_dir,station_id):
     return mod_ind
 ### --------------------------------------------------------------------- ###
 
-### --- Subtract mean sea level from time series, removes NaNs ---------- ###
-# GLOBAL VARIABLES:
-# centre_ssh
-def sub_marine(time_series):
-    # Choose whether to centre data
-    if(centre_ssh==1):
-        time_series = time_series - np.nanmean(time_series) # Subtract mean sea level from time series
-    time_series[np.isnan(time_series)] = 0                  # Remove NaNs from time series
-    return time_series
-### --------------------------------------------------------------------- ###
-
 ### --- Convolute basis functions with time series ---------------------- ###
 # GLOBAL VARIABLES:
 # basis_fn
 def convolute_it(time_series):
-    sp = make_space(time_series)                                                   # set grid for transform
+    sp = make_space(time_series)         
+    # set grid for transform
     t_space = sp[0]       
     s_space = sp[1]
-    tiled_series = np.tile(time_series,np.size(s_space))                           # duplicate time series over s axis
-    tiled_series = np.transpose(tiled_series)                                      
+    tiled_series = np.tile(time_series,(np.size(s_space),1))                           # duplicate time series over s axis
+#    tiled_series = np.transpose(tiled_series)                                      
     convolv_array = np.zeros((np.size(t_space),np.size(s_space),np.size(t_space))) # declare array for convolution
     norm_factor   = np.zeros((np.size(t_space),np.size(s_space),np.size(t_space))) # declare array for normalisation
     # Loop over time dimension for wavelet centre
     for tau in range(0,np.size(t_space)):
+        #print(tau)
         wavelets = make_waves(t_space,s_space,tau)                                 # generate wavelets
         convolv_array[tau,:,:] = np.multiply(tiled_series,wavelets)                # convolute time series with wavelets
         # normalisation - is this correct??  
@@ -237,6 +252,94 @@ def convolute_it(time_series):
         #convolv_array = np.divide(convolve_array,norm_factor)
     return convolv_array, norm_factor
 ### --------------------------------------------------------------------- ###
+
+### --- Convolute basis functions with time series ---------------------- ###
+# GLOBAL VARIABLES:
+# basis_fn
+def convolute_mod(time_series):
+    time_coords = np.arange('2019-10-01T00','2020-10-01T00',dtype='datetime64[h]')
+    sp = make_space(time_series)
+    t_space = sp[0]
+    s_space = sp[1]
+    #tiled_series = time_series * xr.DataArray(np.ones([np.size(t_space),np.size(s_space)]), dims=("tau_dim", "scale_dim"))
+    #tiled_series.to_netcdf('tiled_series.nc')
+    # make wavelets
+    
+    if (setting=='mod'):
+        series = xr.open_dataset('time_series/data/BO_TS_TG_{}_processed_UNFILTERED.nc'.format(station))
+        series = series.ssh_mod.values
+    elif (setting=='obs'):
+        series = np.copy(time_series)
+
+    timer        = xr.DataArray(t_space,[("time_counter",t_space)])
+    tiled_timer  = timer * xr.DataArray(np.ones([np.size(t_space),np.size(s_space)]), dims=("tau_dim","scale_dim"))
+
+    tau          = xr.DataArray(t_space,[("tau_dim", t_space)])
+    tiled_tau    = tau * xr.DataArray(np.ones([np.size(t_space),np.size(s_space)]), dims=("time_counter","scale_dim"))
+    
+    scale        = xr.DataArray(np.power(2,s_space),[("scale_dim", s_space)])
+    tiled_scale  = scale * xr.DataArray(np.ones([np.size(t_space),np.size(t_space)]), dims=("time_counter","tau_dim"))
+
+    # now combine
+    gauss = np.exp(-np.square(tiled_timer-tiled_tau)/np.square(tiled_scale)/2)
+    gauss.to_netcdf('gauss_test.nc')
+
+    wavelets = (1 - np.square((tiled_timer-tiled_tau)/tiled_scale) ) * gauss
+    # normalise
+    wavelets = wavelets / tiled_scale
+    wavelets = wavelets
+        # convert coordinate
+    #wavelets['time_counter'] = pd.DatetimeIndex(wavelets['time_counter'].values)
+    wavelets['time_counter']  = time_coords
+    wavelets.to_netcdf('wavelets.nc')
+    # convolute
+    scale = scale.values
+    del wavelets
+    
+    wavelets = xr.open_dataarray('wavelets.nc')
+    wt = np.zeros((np.size(t_space),np.size(s_space)))
+
+    scale = np.ceil(scale).astype(int)
+    t_space = t_space.astype(int)
+    # try for loops
+    for scale_index in range(0,np.size(s_space)):
+        tau_min = t_space[4*scale[scale_index]]
+        tau_max = t_space[-1-4*scale[scale_index]]
+        #print(tau_min)
+        #print(tau_max)
+        tau_range = np.squeeze(t_space[tau_min:tau_max])
+        for tau_index in tau_range:
+            #print(tau_index)
+            t_min = tau_index-4*scale[scale_index]
+            #print(t_min)
+            t_max = tau_index+4*scale[scale_index]
+            #print(t_max)
+            time_range = np.squeeze(t_space[t_min:t_max])
+            wavelets_local = wavelets.isel(time_counter=slice(time_range[0],time_range[-1])).isel(tau_dim=tau_index).isel(scale_dim=scale_index).values
+            #print(wavelets_local)
+            tiled_series_local = series[time_range[0]:time_range[-1]]
+            #print(tiled_series_local)
+            transform_local = np.multiply(wavelets_local,tiled_series_local)
+            #print(transform_local)
+            transform_local = np.nansum(transform_local)
+            #transform_local = np.square(transform_local)
+            #print(transform_local)
+            wt[tau_index,scale_index] = transform_local
+
+    wt = np.square(wt)
+    
+    # convert scale to frequency for output
+    scale = 4*scale
+
+    da = xr.DataArray(data=wt,dims=["time","freq"],coords=dict(time=time_coords,freq=scale))
+    da = da.groupby("time.date").mean()
+    da['date'] = np.arange('2019-10-01','2020-10-01',dtype='datetime64[D]')
+    for m in [10,11,12,1,2,3,4,5,6,7,8,9]:
+        dm = da.groupby('date.month')[m]
+        dm.to_netcdf('{}_{}_{}_{}.nc'.format(station,setting,freq_mode,m))
+    return 
+### --------------------------------------------------------------------- ###
+
 
 ### --- Coarsen transform output by binning ----------------------------- ###
 # GLOBAL VARIABLES:
@@ -247,8 +350,8 @@ def sort_bins(unbinned):
     t_old    = np.size(unbinned,1)                                  # length of old time dimension
     f_old    = np.size(unbinned,0)                                  # length of old scale dimension
     t_new    = np.int(t_old/time_res)                               # length of new time dimension
-    f_new    = np.int(f_old/freq_res)                               # length of new scale dimension
-    unbinned = np.reshape(unbinned,(f_new,freq_res,t_new,time_res)) # Convert 2d array to 4d 
+    #f_new    = np.int(f_old/freq_res)                               # length of new scale dimension
+    unbinned = np.reshape(unbinned,(f_old,1,t_new,time_res)) # Convert 2d array to 4d 
     # Sum within each bin to return to two dimensions (t_new x f_new)
     binned   = np.nansum(unbinned,(1,3))
     return binned
@@ -262,8 +365,8 @@ def sort_bins(unbinned):
 # GLOBAL VARIABLES:
 # nemo_name
 # nemo_freq
-def get_grid(source_dir,mod_axis):
-    ds        = xr.open_mfdataset('{}/{}/{}_{}_*'.format(source_dir,nemo_name,nemo_name,nemo_freq))
+def get_grid(mod_axis):
+    ds        = xr.open_mfdataset('{}/full_results/{}_{}_*'.format(nemo_name,nemo_name,nemo_freq))
     if (mod_axis=="lat"):
         mod_crd = ds.nav_lat.values # extract latitude values from model
     if (mod_axis=="lon"):
@@ -276,8 +379,8 @@ def get_grid(source_dir,mod_axis):
 # GLOBAL VARIABLES:
 # year_min
 # month_min
-def get_point(source_dir,station_id,stat_axis):
-    ds      = xr.open_dataset('{}/{}_{}{:02d}.nc'.format(source_dir,station_id,year_min,month_min))
+def get_point(station_id,stat_axis):
+    ds      = xr.open_dataset('data/BO_TS_TG_{}_{}{:02d}.nc'.format(station_id,year_min,month_min))
     if (stat_axis=="lat"):
         stat_crd = ds.LATITUDE.values  # extract latitude value for station
     if (stat_axis=="lon"):
@@ -290,8 +393,8 @@ def get_point(source_dir,station_id,stat_axis):
 # scale_min
 # scale_max
 def make_space(time_series):
-    t_space = np.linspace(0,np.size(time_series),np.size(time_series)) # generate time axis values
-    s_space = np.linspace(scale_min,scale_max,scale_max-scale_min)     # generate scale axis values
+    t_space = np.linspace(0,np.size(time_series)-1,np.size(time_series)) # generate time axis values
+    s_space = np.linspace(scale_min,scale_max,freq_res)     # generate scale axis values
     return(t_space,s_space)
 ### --------------------------------------------------------------------- ###
 
@@ -309,17 +412,48 @@ def make_waves(t_space,s_space,tau):
         for s in range(0,np.size(s_space)):                  
             scale         = np.power(2,s_space[s])                                  # use dyadic convention
             wavelets[s,:] = gaussian(t_space,tau,scale)
-            norm_factor   = np.sqrt(np.nansum(np.square(wavelets[s,:])))
+            #norm_factor   = np.sqrt(np.nansum(np.square(wavelets[s,:])))
+            norm_factor = np.sqrt(scale) #wrong!
             wavelets[s,:] = wavelets[s,:] / norm_factor                             # normalisation
     if (basis_fn=="Ricker"):
         # Loop over different scales        
         for s in range(0,np.size(s_space)):
             scale = np.power(2,s_space[s])                                          # use dyadic convention
             wavelets[s,:] = np.multiply((1 - np.square((t_space[:]-tau)/scale)),gaussian(t_space,tau,scale))
-            norm_factor   = np.sqrt(np.nansum(np.square(wavelets[s,:])))
+            #norm_factor   = np.sqrt(np.nansum(np.square(wavelets[s,:])))
+            norm_factor = np.sqrt(scale) #wrong!
             wavelets[s,:] = wavelets[s,:] / norm_factor                             # normalisation
     return wavelets
 ### --------------------------------------------------------------------- ###
+
+### --- Construct wavelet transform basis functions --------------------- ###
+# GLOBAL VARIABLES:
+# basis_fn
+# scale_min
+# scale_max
+def make_waves_mod(t_space,s,tau):
+    wavelets = np.zeros((np.size(t_space)))                          # declare array for wavelets
+#   if (basis_fn=="Cosine"):
+#        wavelets[:]   =  
+    if (basis_fn=="Gaussian"):
+        # Loop over different scales
+        for s in range(0,np.size(s_space)):
+            scale         = np.power(2,s_space[s])                                  # use dyadic convention
+            wavelets[s,:] = gaussian(t_space,tau,scale)
+            #norm_factor   = np.sqrt(np.nansum(np.square(wavelets[s,:])))
+            norm_factor = np.sqrt(scale)
+            wavelets[s,:] = wavelets[s,:] / norm_factor                             # normalisation
+    if (basis_fn=="Ricker"):
+        # Loop over different scales        
+        #for s in range(0,np.size(s_space)):
+        scale = np.power(2,s)                                          # use dyadic convention
+        wavelets[:] = np.multiply((1 - np.square((t_space[:]-tau)/scale)),gaussian(t_space,tau,scale))
+        #norm_factor   = np.sqrt(np.nansum(np.square(wavelets[s,:])))
+        norm_factor = np.sqrt(scale)
+        wavelets[:] = wavelets[:] / norm_factor                             # normalisation
+    return wavelets
+### --------------------------------------------------------------------- ###
+
 
 ### --------------------------------------------------------------------- ###
 
@@ -334,20 +468,21 @@ def gaussian(t_space,tau,scale):
 ### --------------------------------------------------------------------- ###
 
 ### --- Main --------------------------- ###
-fmi_dir ="." # directory of tide gauge data
-station_list = within_bounds(fmi_dir) # this extracts a full list of stations within bounds
+fmi_dir ="data" # directory of tide gauge data
+print(fmi_dir)
+#station_list = within_bounds(fmi_dir) # this extracts a full list of stations within bounds
+station_list = ['Rauma']
 print("Processing {} tide gauge stations".format(np.size(station_list)))
 print(station_list)
 for station in station_list:
     # read in tide gauge data
-    tg            = read_the_tides(fmi_dir,station)
-    tg_transform  = do_transform(tg) # transform obs
+    if (setting == 'obs'):
+        tg            = read_the_tides(station)
+        tg_transform  = do_transform_mod(tg) # transform obs
     # read in model output
-    mod           = sea_extract(fmi_dir,station)
-    mod_transform = do_transform(np.expand_dims(mod,axis=1)) # transform mod
-    # write out data to netcdf
-    write_all(station,tg,tg_transform,mod,mod_transform)
-    print("{} processed".format(station))
+    elif (setting == 'mod'):
+        mod           = sea_extract(station)
+        mod_transform = do_transform_mod(mod) # transform mod
 
 ### ------------------------------------ ###
 
