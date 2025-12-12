@@ -40,17 +40,3 @@ Third level functions
 Fourth level functions
 
       - "gaussian" takes a given time range, centre (tau) and scale, then constructs a one-dimensional gaussian distribution centred at tau, which it returns as output. 
-
-
-
-**apply_threshold.py**:
-
-Functions 
-
-      - "binary_choice" takes a given wavelet scale and quantile degree, and calculates the position of this quantile in the wavelet transform of the given scale, before thresholding the transform to produce a binary with ones only where the transform is within the given quantile.
-
-      - "rmse" calculates the root mean square error
-
-      - "write_out" outputs the 2 dimensional error matrix, showing the model-observation error as a function of the wavelet transform scale and the quantile of the wavelet transform at that scale
-
-      
