@@ -9,7 +9,7 @@
 ### --- GLOBAL VARIABLES ---------------------------------------------- ###
 #           |
 #obs/mod
-setting     = 'mod'
+setting     = 'obs'
 #
 nemo_name   = "UNFILTERED"    # Name of NEMO model output file
 nemo_freq   = "1h"
@@ -68,56 +68,41 @@ import csv
 
 ### --- Top level functions --------------------------------------------- ###
 
-### --- Set bounds in latitude, longitude, time, and frequency domain --- ###
-# GLOBAL VARIABLES:
-# lat_min
-# lat_max
-# lon_min
-# lon_max
-# year_min
-# month_min
-def within_bounds(source_dir):
-    path = Path(source_dir)                              # path of file to find tide gauge data
-    count = 0                                            # count number of files
-    extension = "{}{:02d}.nc".format(year_min,month_min) # generate file names
-    # loop over all matching filenames
-    for filename in path.glob(f"*{extension}"):
-        ds                 = xr.open_dataset(filename)
-        tg_lat             = ds.LATITUDE.values          # read station latitude 
-        tg_lon             = ds.LONGITUDE.values         # read station longitude
-        # check if station is within bounded area
-        if(lat_min < tg_lat < lat_max and lon_min < tg_lon < lon_max):
-            station_name = str(filename)                 # extract station name from filename
-            station_name = station_name[:-10]            # remove time extension from name
-            # check if station has good quality data
-            if (quality_pass(station_name) == 1):
-                if(count>0):
-                    station_list.append(station_name)    # add station to list
-                else:
-                    station_list = [station_name]        # initialise list
-                count = count + 1
-    return (station_list)
-### --------------------------------------------------------------------- ###
-
 ### --- Read in tide gauge data ----------------------------------------- ###
 # GLOBAL VARIABLES:
 # tide_name
 def read_the_tides(station_id):
 #    ds                    = xr.open_mfdataset('{}*'.format(station_id))#,year_min))
 #    station_data          = ds.SLEV.values           # read sea level from tide gauge
-    with open('{}_hourlystats_N2000.txt'.format(station_id), newline='') as csvfile:
-        reader = csv.reader(csvfile, delimiter=' ',quotechar='|')
-        date_time = [ row[1] for row in reader ]
-    dates = np.asarray(date_time,dtype='str')
-    start_date = np.argwhere(dates=='20191001T000000')
-    end_date   = np.argwhere(dates=='20201001T000000')
-    start_date = int(start_date)
-    end_date   = int(end_date)
-    with open('{}_hourlystats_N2000.txt'.format(station_id), newline='') as csvfile:
-        reader = csv.reader(csvfile, delimiter=' ',quotechar='|')
-        ssh = [ row[2] for row in reader ]
+#    with open('{}_hourlystats_N2000.txt'.format(station_id), newline='') as csvfile:
+     #   reader = csv.reader(csvfile, delimiter=' ',quotechar='|')
+     #   date_time = [ row[1] for row in reader ]
+    #dates = np.asarray(date_time,dtype='str')
+    #start_date = np.argwhere(dates=='20191001T000000')
+    #end_date   = np.argwhere(dates=='20201001T000000')
+#    start_date = int(start_date)
+#    end_date   = int(end_date)
+    with open('data/{}.csv'.format(station_id), newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',',quotechar='"')
+        next(reader, None)
+        mins = [ row[4] for row in reader ]
+    mins = np.asarray(mins,dtype=str)
+    minutes = np.array([e[::-1] for e in mins]).astype('U2')
+    minutes = np.asarray(minutes,dtype=int)
+    minutes[minutes>0]=-999
+    minutes[minutes==0] = 1
+    minutes[minutes==-999] = 0
+#    minutes = np.squeeze(minutes[1:])
+    print(minutes)
+    with open('data/{}.csv'.format(station_id), newline='') as csvfile:
+        reader = csv.reader(csvfile, delimiter=',',quotechar='"')
+        next(reader, None)
+        ssh = [ row[5] for row in reader ]
     station_data           = np.asarray(ssh,dtype=np.float32)
-    station_data = np.squeeze(station_data[start_date:end_date+1])
+    station_data = np.extract(minutes,station_data)
+    print(station_data)
+    print(np.shape(station_data))
+#    station_data = np.squeeze(station_data[start_date:end_date+1])
     #station_data          = sub_marine(station_data) # subtract mean sea level
     #convert units!
     station_data = station_data/1000
@@ -129,7 +114,7 @@ def read_the_tides(station_id):
 # nemo_name
 # nemo_freq
 def sea_extract(station_id):
-    ds        = xr.open_mfdataset('{}/full_results/{}_{}_*'.format(nemo_name,nemo_name,nemo_freq))
+    ds        = xr.open_mfdataset('full_output/{}_{}_*'.format(nemo_name,nemo_freq))
     mod_ind   = match_point(station_id)  # find point in model domain closest to tide gauge
     sl        = ds.isel(y=mod_ind[0], x=mod_ind[1]) # extract this point from the model output
     ssh_mod   = sl.zos                       # read in sea level from model output
@@ -221,7 +206,7 @@ def match_point(station_id):
     stat_lon = get_point(station_id,"lon")                   # extract longitude coordinate for station
     # calculate distance from each model point to station
     diff_latlon = np.square(mod_lat-stat_lat)+np.square((mod_lon-stat_lon)*np.cos(stat_lat*np.pi/180))
-    ds        = xr.open_mfdataset('{}/{}_{}_*'.format(nemo_name,nemo_name,nemo_freq))
+    ds        = xr.open_mfdataset('full_output/{}_{}_*'.format(nemo_name,nemo_freq))
     sl        = ds.isel(time_counter=0)                                 # extract initial time slice
     ssh_mod   = sl.zos.values                                           # extract initial sea level field
     diff_latlon[ssh_mod==0] = np.nan                                    # disregard land pointd
@@ -258,6 +243,7 @@ def convolute_it(time_series):
 # basis_fn
 def convolute_mod(time_series):
     time_coords = np.arange('2019-10-01T00','2020-10-01T00',dtype='datetime64[h]')
+    print(time_coords)
     sp = make_space(time_series)
     t_space = sp[0]
     s_space = sp[1]
@@ -266,8 +252,9 @@ def convolute_mod(time_series):
     # make wavelets
     
     if (setting=='mod'):
-        series = xr.open_dataset('time_series/data/BO_TS_TG_{}_processed_UNFILTERED.nc'.format(station))
-        series = series.ssh_mod.values
+        series  = np.copy(time_series)
+        #series = xr.open_dataset('time_series/data/BO_TS_TG_{}_processed_UNFILTERED.nc'.format(station))
+        #series = series.ssh_mod.values
     elif (setting=='obs'):
         series = np.copy(time_series)
 
@@ -336,7 +323,7 @@ def convolute_mod(time_series):
     da['date'] = np.arange('2019-10-01','2020-10-01',dtype='datetime64[D]')
     for m in [10,11,12,1,2,3,4,5,6,7,8,9]:
         dm = da.groupby('date.month')[m]
-        dm.to_netcdf('{}_{}_{}_{}.nc'.format(station,setting,freq_mode,m))
+        dm.to_netcdf('{}/{}_{}_{}_{}.nc'.format(station,station,setting,freq_mode,m))
     return 
 ### --------------------------------------------------------------------- ###
 
@@ -366,7 +353,7 @@ def sort_bins(unbinned):
 # nemo_name
 # nemo_freq
 def get_grid(mod_axis):
-    ds        = xr.open_mfdataset('{}/full_results/{}_{}_*'.format(nemo_name,nemo_name,nemo_freq))
+    ds        = xr.open_mfdataset('full_output/{}_{}_*'.format(nemo_name,nemo_freq))
     if (mod_axis=="lat"):
         mod_crd = ds.nav_lat.values # extract latitude values from model
     if (mod_axis=="lon"):
@@ -380,7 +367,8 @@ def get_grid(mod_axis):
 # year_min
 # month_min
 def get_point(station_id,stat_axis):
-    ds      = xr.open_dataset('data/BO_TS_TG_{}_{}{:02d}.nc'.format(station_id,year_min,month_min))
+    print('locations/BO_TS_TG_{}_{}{:02d}.nc'.format(station_id,year_min,month_min))
+    ds      = xr.open_dataset('locations/BO_TS_TG_{}_{}{:02d}.nc'.format(station_id,year_min,month_min))
     if (stat_axis=="lat"):
         stat_crd = ds.LATITUDE.values  # extract latitude value for station
     if (stat_axis=="lon"):
@@ -471,7 +459,7 @@ def gaussian(t_space,tau,scale):
 fmi_dir ="data" # directory of tide gauge data
 print(fmi_dir)
 #station_list = within_bounds(fmi_dir) # this extracts a full list of stations within bounds
-station_list = ['Rauma']
+station_list = ['Hanko','Helsinki','Porvoo','Hamina']
 print("Processing {} tide gauge stations".format(np.size(station_list)))
 print(station_list)
 for station in station_list:
