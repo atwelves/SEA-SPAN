@@ -1,7 +1,7 @@
 **SEA-SPAN** (**SEA** level **SP**ectral **AN**alysis) is a set of Python tools that can be used to extract SSH at tide gauge stations from NEMO model output, and compare against tide gauge data using Fourier and (Ricker) wavelet analysis. 
 
 - 1 script to process sea level data, match with model output locations and transform both model and observations into time-frequency coordinates.
-- 1 script to apply thresholding to transform field, transform time axis to variability axis, and calculate RMSE based on this new coordinate system.
+- 5 scripts to plot figures 
 
 **process_ssh.py**:
 
