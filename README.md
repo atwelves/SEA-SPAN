@@ -40,3 +40,17 @@ Third level functions
 Fourth level functions
 
       - "gaussian" takes a given time range, centre (tau) and scale, then constructs a one-dimensional gaussian distribution centred at tau, which it returns as output. 
+
+**plot_fig_a.py**
+
+Plots spectral density (Figure 3 in paper)
+
+**plot_fig_b.py**
+
+Plots mesoscale and synoptic-scale spectral power anomalies (Figure 4 in paper)
+
+**plot_fig_c.py**
+
+**plot_fig_d.py**
+
+**plot_fig_e.py**
