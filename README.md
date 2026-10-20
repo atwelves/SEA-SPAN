@@ -54,3 +54,15 @@ Plots mesoscale and synoptic-scale spectral power anomalies (Figure 4 in paper)
 **plot_fig_d.py**
 
 **plot_fig_e.py**
+
+**plot_stdv.py**
+
+Plots standard deviations of tide gauge time series on a map (Figure 2a in paper)
+
+**plot_taylor.py**
+
+Script based on Elvidge et al. (2014, https://doi.org/10.1002/2014RS005435, ) to make Taylor Diagrams in Figure 2b of paper.
+
+**plot_taylor_components.py**
+
+Script based on Elvidge et al. (2014, https://doi.org/10.1002/2014RS005435, ) to make Taylor Diagrams in Figure 2b of paper.
