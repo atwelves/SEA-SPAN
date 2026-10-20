@@ -1,13 +1,16 @@
-# 16.06.2025
+# Started 16.06.2025
+# Last update 20.10.2026
 # Andrew G Twelves
 
 # Script to plot time-averaged wavelet spectra
 
+# Load modules
 import xarray as xr
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
+# List of tide gauge stations
 stations = ['Kemi','Oulu','Raahe',
             'Pietarsaari','Vaasa',
             'Kaskinen','Pori','Rauma',
@@ -55,14 +58,19 @@ for st in stations:
     plt.figure(figsize=(20,6))
     # shading for mesoscale part of spectrum
     plt.fill_betweenx([0,1.1*10000*np.nanmax(obs_spectrum)],[0,0],[2,2],color=(0.8,0.8,0.8))
-    # tide gauge
+    
+    # tide gauge spectrum
     plt.plot(tau,10000*obs_spectrum,linewidth=5,color=(27/255,158/255,119/255))
     plt.scatter(tau,10000*obs_spectrum,s=1000,color=(27/255,158/255,119/255),alpha=0.5,facecolor='none',linewidth=4)
+    # tide gauge spectral peak
     plt.scatter(obs_peak_freq,10000*obs_peak_max,s=1000,color=(27/255,158/255,119/255),alpha=0.5,label='{:.1f} hrs    {:.1f} cm² day⁻¹'.format(obs_peak_freq*24,obs_peak_max*10000))
-    # NEMO
+    
+    # NEMO spectrum
     plt.plot(tau,10000*mod_spectrum,linewidth=5,color=(117/255,112/255,179/255))
     plt.scatter(tau,10000*mod_spectrum,s=1000,color=(117/255,112/255,179/255),alpha=0.5,facecolor='none',linewidth=4)
+    # NEMO spectral peak
     plt.scatter(mod_peak_freq,10000*mod_peak_max,s=1000,color=(117/255,112/255,179/255),alpha=0.5,label='{:.1f} hrs    {:.1f} cm² day⁻¹'.format(mod_peak_freq*24,mod_peak_max*10000))
+
     # formatting
     plt.xticks([5,10,15,20,25,30],fontsize=30)
     plt.yticks(fontsize=0)
