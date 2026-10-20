@@ -1,7 +1,7 @@
 # Last update 20.10.2026
 # Andrew G Twelves
 
-# Script to plot time-averaged wavelet spectra
+# Script to plot mesoscale and synoptic-scale spectral power
 
 # Load modules
 import xarray as xr
