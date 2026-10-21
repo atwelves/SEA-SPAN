@@ -1,3 +1,6 @@
+# Last edited 21.10.26
+
+# Load modules
 import xarray as xr
 import numpy as np
 import matplotlib as mpl
@@ -5,20 +8,14 @@ from matplotlib import pyplot as plt
 import csv
 import cmocean
 
+# List of stations
 stations = ['Kemi','Oulu','Raahe',
             'Pietarsaari','Vaasa',
             'Kaskinen','Pori','Rauma',
             'Degerby',
             'Hanko','Helsinki','Porvoo','Hamina']
 
-markers = ['v','^','>',
-           '<','8',
-           'p','s','h',
-           'o',
-           '*','P','X','D'] 
-
-#maps
-
+# This is just for use as the land-sea mask...
 ds = xr.open_dataset('anomaly_maps/diff_mld_202009_mean.nc')
 mld = ds.mld.values
 lat = ds.nav_lat_grid_T.values
@@ -43,20 +40,20 @@ plt.xlabel('$\degree$W',fontsize=25)
 plt.ylabel('$\degree$N',fontsize=25)
 i = -1
 
+# Declare empty arrays
 lat = np.zeros((13))
 lon = np.zeros((13))
 std = np.zeros((13))
+
+# Now loop over stations
 for st in stations:
     print(st)
     i = i+1
+
+    # Open station time series
     ds = xr.open_dataset('data/BO_TS_TG_{}_201910.nc'.format(st))
     lat[i] = ds.LATITUDE.values
     lon[i] = ds.LONGITUDE.values
-        # observations
-        #obs  = ds.ssh_obs.values
-        #data = obs - np.nanmean(obs)
-        #datastd = data.std(ddof=1)
-
     with open('{}_hourlystats_N2000.txt'.format(st), newline='') as csvfile:
         reader = csv.reader(csvfile, delimiter=' ',quotechar='|')
         date_time = [ row[1] for row in reader ]
@@ -71,19 +68,20 @@ for st in stations:
     station_data           = np.asarray(ssh,dtype=np.float32)
     station_data = np.squeeze(station_data[start_date:end_date+1])
     data = station_data - np.nanmean(station_data)
+    # Convert mm to m
     data = data/1000
+    # Calculate standard deviation
     datastd = data.std(ddof=1)
     print(datastd)
+    # Convert m to cm
     std[i] = 100*datastd
     print(std)
 #    if st == "Degerby":
 #        plt.scatter(lon,lat,s=250,marker=markers[i],label='Föglö',c='c',edgecolors='k')
 #    else:
 #        plt.scatter(lon,lat,s=250,marker=markers[i],label='{}'.format(st),c='c',edgecolors='k')
+# Plot all stations on map
 plt.scatter(lon,lat,s=250,marker='o',label='{}'.format(st),c=std,cmap='cmo.amp',edgecolors='k')
 cbar = plt.colorbar()
 cbar.ax.tick_params(labelsize=30)
-#plt.title('Mixed layer depth anomaly (m)',fontsize=40)
-#plt.legend(fontsize=15)
-
 plt.savefig('stdv_map.png')
