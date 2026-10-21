@@ -300,11 +300,11 @@ if __name__ == '__main__':
 
         colors = dia.calc_colors(points[2])
 
-        # Standard deviation of spectral power
+        # Standard deviation of sea level
         modstd = points[0]
-        # Correlation of spectral power
+        # Correlation of sea level
         corrcoef = points[1]
-        # Bias of spectral power
+        # Bias of sea level
         bias   = points[2]
 
         print(type(datastd))
