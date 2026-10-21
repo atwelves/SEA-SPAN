@@ -77,13 +77,13 @@ plt.xlim(1,30)
 cb=plt.colorbar(orientation='horizontal')
 cb.ax.tick_params(labelsize=30) 
 
-# top_offset = 19
+top_offset = 19
 # Plot observed time series in offset top panel
 plt.plot(np.linspace(1,30,29*24),10*obs[123*24:152*24]+top_offset,linewidth=3,color='k',label='obs')
 # Plot model time series in offset top panel
 plt.plot(np.linspace(1,30,29*24),10*mod[123*24:152*24]+top_offset,linewidth=3,color='k',linestyle='--',label='mod')
 
-# bottom_offset = -7
+bottom_offset = -7
 # Plot difference between time series in offset bottom panel
 plt.plot(np.linspace(1,30,29*24),10*(mod[123*24:152*24]-obs[123*24:152*24])+bottom_offset,linewidth=3,color='k')
 
