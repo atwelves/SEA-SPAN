@@ -1,3 +1,6 @@
+# Modified further by Andrew G Twelves
+# Last edit 21.10.26
+
 # -*- coding: utf-8 -*-
 #
 #****************************************************************************#
@@ -271,27 +274,34 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(11, 7))
     dia = ModifiedTaylorDiagram(1, fig=fig, normalize='Y', fontsize=14)
 
+    # Choose station
     st = 'Kemi'
 
-#    wavelet = 'Ricker'
-
+    # Declare empty arrays
     obs = np.zeros((16,366))
     mod = np.zeros((16,366))
 
+    # Open mesoscale part of observed spectrum
     ds  = xr.open_mfdataset('{}_obs_meso_*'.format(st))    
     mes = ds.__xarray_dataarray_variable__.values
     obs[0:8 ,:] = np.transpose(mes[:,:])
+    
+    # Open synoptic-scale part of observed spectrum
     ds  = xr.open_mfdataset('{}_obs_syno_*'.format(st))
     syn = ds.__xarray_dataarray_variable__.values
     obs[8:16,:] = np.transpose(syn[:,:])
 
+    # Open mesoscale part of model spectrum
     ds = xr.open_mfdataset('{}_mod_meso_*'.format(st))
     mes = ds.__xarray_dataarray_variable__.values
     mod[0:8,:] = np.transpose(mes[:,:])
+
+    # Open synoptic-scale part of model spectrum
     ds = xr.open_mfdataset('{}_mod_syno_*'.format(st))
     syn = ds.__xarray_dataarray_variable__.values
     mod[8:16,:] = np.transpose(syn[:,:])
 
+    # Calculate sum of bias for scaling of scatter points
     sum_bias = np.nansum(mod) - np.nansum(obs)
     print(sum_bias)
 
@@ -301,15 +311,15 @@ if __name__ == '__main__':
         data = obs[f,:]
         m    = mod[f,:]
 
+        # Calculate standard deviation
         datastd = data.std(ddof=1)
         points = np.array([m.std(ddof=1), np.corrcoef(data, m)[0, 1], m.mean() - data.mean()])        
-        
-        #colors = dia.calc_colors(points[2])
-        #print(colors)
-        #dia.add_colorbar(points[2], fontsize=14)
 
+        # Standard deviation in spectral power
         modstd = points[0]
+        # Correlation in spectral power
         corrcoef = points[1]
+        # Bias in spectral power
         bias   = 366*points[2]
 
         print(bias)
@@ -324,8 +334,6 @@ if __name__ == '__main__':
                                 linestyles='dotted')
     plt.clabel(contours, inline=1, use_clabeltext=1, fmt='%1.2f',fontsize=12)
     dia.ax.text(1.5, 1.25, 'Error Std. Dev.',rotation=30, color='k',fontsize=12)
-
-    #dia.add_colorbar(np.linspace(0,15,16),fontsize=14)
 
     fig.savefig("fig.png", dpi=600, facecolor='w', edgecolor='w')
     plt.savefig('taylor_wavelet_{}.png'.format(st))
