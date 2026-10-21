@@ -1,3 +1,7 @@
+# Andrew G Twelves
+# Last edit 21.10.26
+
+# Load modules
 import xarray as xr
 import numpy as np
 import matplotlib as mpl
