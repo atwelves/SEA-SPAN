@@ -47,13 +47,19 @@ Plots spectral density (Figure 3 in paper)
 
 **plot_fig_b.py**
 
-Plots mesoscale and synoptic-scale spectral power anomalies (Figure 4 in paper)
+Plots time-averaged mesoscale and synoptic-scale spectral power anomalies (Figure 4 in paper)
 
 **plot_fig_c.py**
 
+Plots mesoscale and synoptic-scale spectral power anomalies as time series, and scatter plots (Figure 5 in paper)
+
 **plot_fig_d.py**
 
+Plots full year of spectral amplitude anomaly (Figure 6 in paper) 
+
 **plot_fig_e.py**
+
+Plots sea level series, sea level model errors, and spectral amplitude anomalies, for February only (Figure 7 in paper)
 
 **plot_stdv.py**
 
@@ -65,4 +71,4 @@ Script based on Elvidge et al. (2014, https://doi.org/10.1002/2014RS005435, ) to
 
 **plot_taylor_components.py**
 
-Script based on Elvidge et al. (2014, https://doi.org/10.1002/2014RS005435, ) to make Taylor Diagrams in Figure 2b of paper.
+Script based on Elvidge et al. (2014, https://doi.org/10.1002/2014RS005435, ) to make spectral Taylor Diagrams in Figure 8 of paper.
