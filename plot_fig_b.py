@@ -39,11 +39,11 @@ syn_obs = np.zeros((13))
 for st in stations:
     i = i+1
     # Open mesoscale part of observed spectra
-    ds = xr.open_mfdataset('{}/{}_obs_meso*'.format(st,st))
+    ds = xr.open_mfdataset('{}_obs_meso*'.format(st))
     # Sum over mesoscale frequencies and average over time
     mes_obs[i] = 10000*ds.__xarray_dataarray_variable__.sum(dim='freq').mean(dim='date').values
     # Open synoptic-scale part of observed spectra
-    ds = xr.open_mfdataset('{}/{}_obs_syno*'.format(st,st))
+    ds = xr.open_mfdataset('{}_obs_syno*'.format(st))
     # Sum over synoptic-scale frequencies and average over time
     syn_obs[i] = 10000*ds.__xarray_dataarray_variable__.sum(dim='freq').mean(dim='date').values
     # plot synoptic-scale against mesoscale for each station
@@ -71,7 +71,7 @@ plt.grid()
 plt.ylim(0,3000)
 plt.xlim(0,1000)
 plt.tight_layout()
-plt.savefig('fig_b/ratios_obs.png')
+plt.savefig('ratios_obs.png')
 
 # now plot model results
 
@@ -83,11 +83,11 @@ syn_mod = np.zeros((13))
 for st in stations:
     i = i+1
     # Open mesoscale part of model spectra
-    ds = xr.open_mfdataset('{}/{}_mod_meso*'.format(st,st))
+    ds = xr.open_mfdataset('{}_mod_meso*'.format(st,st))
     # Sum over mesoscale frequencies and average over time
     mes_mod[i] = 10000*ds.__xarray_dataarray_variable__.sum(dim='freq').mean(dim='date').values
     # Open synoptic-scale part of model spectra
-    ds = xr.open_mfdataset('{}/{}_mod_syno*'.format(st,st))
+    ds = xr.open_mfdataset('{}_mod_syno*'.format(st,st))
     # Sum over synoptic-scale frequencies and average over time
     syn_mod[i] = 10000*ds.__xarray_dataarray_variable__.sum(dim='freq').mean(dim='date').values
     plt.scatter(mes_mod[i],syn_mod[i],s=250,marker=markers[i],c=custom[i],edgecolors='k')
@@ -114,7 +114,7 @@ plt.yticks(fontsize=30,rotation=45)
 plt.ylim(0,3000)
 plt.xlim(0,1000)
 plt.tight_layout()
-plt.savefig('fig_b/ratios_mod.png')
+plt.savefig('ratios_mod.png')
 
 # now plot anomaly (UNFILTERED)
 
@@ -140,4 +140,4 @@ plt.ylim(-900,0)
 plt.xlim(-225,0)
 #plt.legend(fontsize=25,framealpha=1)
 plt.tight_layout()
-plt.savefig('fig_b/ratios_anom.png')
+plt.savefig('ratios_anom.png')
