@@ -27,9 +27,9 @@ tau      = np.power(2,exponent)/6
 
 for st in stations:
     # read mesoscale part of tide gauge spectrum
-    meso           = xr.open_mfdataset('{}/{}_obs_meso_*'.format(st,st)).mean(dim='date').__xarray_dataarray_variable__.values
+    meso           = xr.open_mfdataset('{}_obs_meso_*'.format(st)).mean(dim='date').__xarray_dataarray_variable__.values
     # read synoptic scale part of tide gauge spectrum
-    syno           = xr.open_mfdataset('{}/{}_obs_syno_*'.format(st,st)).mean(dim='date').__xarray_dataarray_variable__.values
+    syno           = xr.open_mfdataset('{}_obs_syno_*'.format(st)).mean(dim='date').__xarray_dataarray_variable__.values
     # concatenate
     obs_spectrum[0:8]  = meso
     obs_spectrum[8:16] = syno
@@ -41,9 +41,9 @@ for st in stations:
     obs_peak_max       = obs_spectrum[obs_peak_position]
 
     # read mesoscale part of model spectrum
-    meso           = xr.open_mfdataset('{}/{}_mod_meso_*'.format(st,st)).mean(dim='date').__xarray_dataarray_variable__.values
+    meso           = xr.open_mfdataset('{}_mod_meso_*'.format(st)).mean(dim='date').__xarray_dataarray_variable__.values
     # read synoptic scale part of model spectrum
-    syno           = xr.open_mfdataset('{}/{}_mod_syno_*'.format(st,st)).mean(dim='date').__xarray_dataarray_variable__.values
+    syno           = xr.open_mfdataset('{}_mod_syno_*'.format(st)).mean(dim='date').__xarray_dataarray_variable__.values
     # concatenate
     mod_spectrum[0:8]  = meso
     mod_spectrum[8:16] = syno
@@ -82,4 +82,4 @@ for st in stations:
     plt.locator_params(axis='y', nbins=4)
     plt.legend(fontsize=35)
     plt.tight_layout()
-    plt.savefig('fig_a/{}_tavgd_spectrum.png'.format(st))
+    plt.savefig('{}_tavgd_spectrum.png'.format(st))
