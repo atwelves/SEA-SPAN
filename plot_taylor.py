@@ -1,3 +1,6 @@
+# Modified further by Andrew G Twelves
+# Last edit 21.10.26
+
 # -*- coding: utf-8 -*-
 #
 #****************************************************************************#
@@ -248,33 +251,14 @@ class ModifiedTaylorDiagram:
 
 
 if __name__ == '__main__':
-    
-#    stations = ['Kemi','Oulu','Raahe',
-#            'Pietarsaari','Vaasa',
-#            'Kaskinen','Pori','Rauma',
-#            'Degerby',
-#            'Hanko','Helsinki','Porvoo','Hamina']
 
+    # subset of stations
     stations = ['Kemi','Rauma','Föglö','Hanko','Hamina']
-
-#    stations = ['Degerby']
 
     # set colormap - different colours for Gulf of Bothnia, Gulf of Finland and Degerby
     custom = [( 27/255,158/255,119/255),( 27/255,158/255,119/255),(217/255, 95/255,  2/255),(117/255,112/255,179/255),(117/255,112/255,179/255)]
-
-#    custom = [( 27/255,158/255,119/255),( 27/255,158/255,119/255),( 27/255,158/255,119/255),
-#              ( 27/255,158/255,119/255),( 27/255,158/255,119/255),
-#              ( 27/255,158/255,119/255),( 27/255,158/255,119/255),( 27/255,158/255,119/255),
-#              (217/255, 95/255,  2/255),
-#              (117/255,112/255,179/255),(117/255,112/255,179/255),(117/255,112/255,179/255),(117/255,112/255,179/250)]
-
+    # different marker for each station
     markers = ['v','h','o','*','D']
-
-#    markers = ['v','^','>',
-#           '<','8',
-#           'p','s','h',
-#           'o',
-#           '*','P','X','D'] 
 
     model_points = np.zeros((len(stations),366*24))
     data         = np.zeros((len(stations),366*24))
@@ -289,12 +273,7 @@ if __name__ == '__main__':
         # time series
         ds   = xr.open_dataset('time_series/data/BO_TS_TG_{}_processed_UNFILTERED.nc'.format(st))
         print(ds)
-        
-        # observations
-        #obs  = ds.ssh_obs.values
-        #data = obs - np.nanmean(obs)
-        #datastd = data.std(ddof=1)
-        
+
         with open('{}_hourlystats_N2000.txt'.format(st), newline='') as csvfile:
             reader = csv.reader(csvfile, delimiter=' ',quotechar='|')
             date_time = [ row[1] for row in reader ]
@@ -312,18 +291,20 @@ if __name__ == '__main__':
         data = data/1000
         datastd = data.std(ddof=1)
 
-        # model
+        # Open model time series
         mod  = ds.ssh_mod.values
+        # Centre model time series around mean
         m = mod - np.nanmean(mod)
-   #     dia = ModifiedTaylorDiagram(datastd, fig=fig, normalize='Y', fontsize=14)
 
         points = np.array([m.std(ddof=1), np.corrcoef(data, m)[0, 1], m.mean() - data.mean()])
 
         colors = dia.calc_colors(points[2])
-#    dia.add_colorbar(points[:, 2], fontsize=14)
 
+        # Standard deviation of spectral power
         modstd = points[0]
+        # Correlation of spectral power
         corrcoef = points[1]
+        # Bias of spectral power
         bias   = points[2]
 
         print(type(datastd))
@@ -331,9 +312,6 @@ if __name__ == '__main__':
         dia.add_point(datastd,modstd, corrcoef, stations[j], marker=markers[j],
                       markersize=10., c=custom[j],
                       label=f"{stations[j]}")
-
-#    dia.add_legend(stations, [f"{lbl}" for lbl in stations],
-#                   prop=dict(size='small'), loc=(0.8, 0.9))
 
     contours = dia.add_contours(colors='k',
                                 levels=np.linspace(0, 1.5, 7),
